@@ -1,0 +1,5 @@
+*.elf
+*.hex
+*.o
+verification/sim_timing
+verification/host_test/test_stepper
