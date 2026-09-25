@@ -1,0 +1,77 @@
+@startuml syringe_use_cases
+' Week 2 - UML use case diagram
+' Stepper Motor Linear Actuator Syringe System (CLI)
+' Source of the requirements: Prog5/Assignments/week2/syringe_system_requirements.md
+' Render: java -jar plantuml.jar -tsvg -tpng syringe_use_cases.puml
+
+top to bottom direction
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #FDFDFD
+  BorderColor #444444
+}
+skinparam shadowing false
+skinparam defaultFontSize 13
+
+actor "CLI User" as User
+actor "System\nAdministrator" as Admin
+
+rectangle "Syringe Dispensing System (System)" {
+
+  package "2. Information Commands" {
+    usecase "List Volumes\n<i>list-volumes</i>" as UC3
+    usecase "Show Status\n<i>status</i>" as UC4
+    usecase "Show Help\n<i>help</i>" as UC5
+    usecase "Show Version\n<i>version</i>" as UC6
+  }
+
+  package "1. Normal CLI Operations" {
+    usecase "Dispense Air\n<i>dispense <volume></i>" as UC1
+    usecase "Home Actuator\n<i>home</i>" as UC2
+    usecase "Validate Volume" as UC1a
+    usecase "Verify Dispensed Volume\n(sensor reading, accuracy %)" as UC1b
+    usecase "Show Real-time Progress" as UCp
+  }
+
+  package "4. Error Handling" {
+    usecase "Emergency Stop\n<i>emergency-stop</i>" as UC10
+    usecase "Handle Invalid Command\n(show usage help)" as UC11
+    usecase "Reject Invalid Volume" as UC12
+    usecase "Report Sensor Error\n(error code, diagnostics,\nrecovery instructions)" as UC13
+  }
+
+  package "3. Administrative CLI" {
+    usecase "Calibrate Volume\n<i>calibrate <volume></i>" as UC7
+    usecase "Add Volume Option\n<i>add-volume <value></i>" as UC8
+    usecase "Test Dispense\n<i>test <volume></i>" as UC9
+  }
+}
+
+' --- associations -----------------------------------------------------------
+User -- UC1
+User -- UC2
+User -- UC3
+User -- UC4
+User -- UC5
+User -- UC6
+User -- UC10
+User -- UC11
+
+Admin -- UC7
+Admin -- UC8
+Admin -- UC9
+
+' The administrator is a CLI user with extra rights: every CLI User use case
+' is available to the administrator as well.
+User <|- Admin
+
+' --- include / extend ------------------------------------------------------
+UC1 ..> UC1a : <<include>>
+UC1 ..> UC1b : <<include>>
+UC1 ..> UCp  : <<include>>
+UC2 ..> UCp  : <<include>>
+UC11 ..> UC5 : <<include>>
+UC12 ..> UC1a : <<extend>>\n[volume not in list]
+UC13 ..> UC1b : <<extend>>\n[sensor error]
+
+@enduml
