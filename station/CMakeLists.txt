@@ -18,7 +18,7 @@ if(MOSQUITTO_INCLUDE_DIR AND MOSQUITTO_LIBRARY)
     set(BME280_HAVE_MOSQUITTO ON PARENT_SCOPE)
     set(BME280_HAVE_MOSQUITTO ON)
 else()
-    message(STATUS "libmosquitto not found: MqttPublisher and bme280_station are not built "
-                   "(apt install libmosquitto-dev)")
+    message(STATUS "libmosquitto not found: bme280_station_mqtt (MqttPublisher) and station_main "
+                   "are not built (apt install libmosquitto-dev)")
     set(BME280_HAVE_MOSQUITTO OFF PARENT_SCOPE)
 endif()
