@@ -1,0 +1,73 @@
+@startuml week4_class_diagram
+' Week 4: Bus/Clock split. Arrows point from the platform to the core
+' abstractions (DIP); the core has no arrow to Arduino or Linux.
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+hide empty members
+
+package "core  (include/bme280, src/)  - no Arduino, no Linux" as core {
+  interface Bus <<abstract>> {
+    + {abstract} read(reg : uint8_t, data : uint8_t*, len : size_t) : bool
+    + {abstract} write(reg : uint8_t, data : const uint8_t*, len : size_t) : bool
+    + ~Bus()  <<virtual>>
+  }
+  interface Clock <<abstract>> {
+    + {abstract} delayUs(us : uint32_t) : void
+    + ~Clock()  <<virtual>>
+  }
+  class Bme280 {
+    - bus_ : Bus&
+    - clock_ : Clock&
+    - dev_ : bme280_dev
+    + Bme280(bus : Bus&, clock : Clock&)
+    + init(config : Config = {}) : Error
+    + configure(config : Config) : Error
+    + setMode(mode : Mode) : Error
+    + readForced(out : Measurement&) : Error
+    + read(out : Measurement&) : Error
+    + measurementTimeUs() : uint32_t
+  }
+  class "Bosch BME280 SensorAPI" as Bosch <<C, third_party>>
+}
+
+package "platform/arduino" as arduino {
+  class ArduinoI2cBus <<final>> {
+    - wire_ : TwoWire&
+    - address_ : uint8_t
+    + ArduinoI2cBus(wire : TwoWire&, address : uint8_t)
+  }
+  class ArduinoClock <<final>>
+}
+
+package "platform/linux" as linux {
+  class LinuxI2cBus <<final>> {
+    - fd_ : int
+    - address_ : uint8_t
+    + LinuxI2cBus(address : uint8_t, device = "/dev/i2c-1")
+    + ~LinuxI2cBus()  <<closes fd>>
+    .. non-copyable, non-movable ..
+  }
+  class LinuxClock <<final>>
+}
+
+Bme280 -down-> Bus   : uses
+Bme280 -down-> Clock : uses
+Bme280 .right.> Bosch : wraps
+
+ArduinoI2cBus -up-|> Bus
+LinuxI2cBus   -up-|> Bus
+ArduinoClock  -up-|> Clock
+LinuxClock    -up-|> Clock
+
+note bottom of linux
+  read(): one I2C_RDWR ioctl
+  [W reg] + repeated start + [R len]
+  delayUs(): clock_nanosleep(MONOTONIC, ABSTIME)
+end note
+note bottom of arduino
+  read(): endTransmission(false) keeps the bus
+  (repeated start), then requestFrom()
+  delayUs(): delay() + delayMicroseconds()
+end note
+@enduml
