@@ -116,6 +116,11 @@ Bme280::Bme280(Bus& bus, Clock& clock) : bus_(bus), clock_(clock)
     dev_.delay_us = &Bme280::delayCb;
 }
 
+Error Bme280::init()
+{
+    return init(Config{});
+}
+
 Error Bme280::init(const Config& config)
 {
     initialised_ = false;

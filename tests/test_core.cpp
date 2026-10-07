@@ -38,6 +38,10 @@ static_assert(std::is_constructible<bme280::Bme280, bme280::Bus&, bme280::Clock&
 static_assert(!std::is_constructible<bme280::Bme280, bme280::Bus&>::value, "a Clock is required");
 static_assert(!std::is_copy_constructible<bme280::Bme280>::value, "Bme280 is non-copyable");
 static_assert(!std::is_move_constructible<bme280::Bme280>::value, "Bme280 is non-movable");
+// Week 5: Bme280 implements the interface the Sampler depends on (DIP).
+static_assert(std::is_base_of<station::EnvironmentSensor, bme280::Bme280>::value,
+              "Bme280 is an EnvironmentSensor");
+static_assert(std::has_virtual_destructor<station::EnvironmentSensor>::value, "interface");
 
 // --- Test doubles ---------------------------------------------------------
 
@@ -170,6 +174,26 @@ void callsBeforeInitAreRejectedWithoutTouchingHardware()
     CHECK(clock.delays.empty());
 }
 
+void worksThroughEnvironmentSensorInterface()
+{
+    // What the Sampler sees: only init() and readForced(), via the interface.
+    MockBus   bus;
+    FakeClock clock;
+    bme280::Bme280             concrete(bus, clock);
+    station::EnvironmentSensor& sensor = concrete;
+    bme280::Measurement m;
+    CHECK(sensor.readForced(m) == bme280::Error::NotInitialised);
+    CHECK(sensor.init() == bme280::Error::None);
+    CHECK(sensor.readForced(m) == bme280::Error::None);
+    CHECK_NEAR(m.temperatureC, 25.08, 0.005);
+
+    // The Week 3/4 overload with a Config is still there.
+    bme280::Config cfg;
+    cfg.pressure = bme280::Oversampling::x16;
+    CHECK(concrete.init(cfg) == bme280::Error::None);
+    CHECK(((bus.chip.regs[0xF4] >> 2) & 0x07) == 0x05);
+}
+
 void twoSensorsShareOneClock()
 {
     // The point of the split: one Clock, any number of buses/sensors.
@@ -194,6 +218,7 @@ int main()
     RUN(wrongChipIdIsReported);
     RUN(busFailureIsReported);
     RUN(callsBeforeInitAreRejectedWithoutTouchingHardware);
+    RUN(worksThroughEnvironmentSensorInterface);
     RUN(twoSensorsShareOneClock);
     return TEST_RESULT();
 }

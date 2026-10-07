@@ -6,6 +6,7 @@
 #include "Bus.hpp"
 #include "Clock.hpp"
 #include "Types.hpp"
+#include "../station/EnvironmentSensor.hpp"
 
 // The wrapper converts integer compensation results (see Bme280.cpp), so the
 // Bosch driver must be built with BME280_32BIT_ENABLE everywhere. CMake
@@ -31,7 +32,7 @@ namespace bme280 {
 ///
 /// Lifetime: `bus` and `clock` are borrowed, not owned. Both must outlive
 /// this object; the caller (sketch / main) creates them first.
-class Bme280 {
+class Bme280 : public station::EnvironmentSensor {
 public:
     /// Does not touch hardware; call init() for that.
     Bme280(Bus& bus, Clock& clock);
@@ -41,8 +42,12 @@ public:
     Bme280(const Bme280&)            = delete;
     Bme280& operator=(const Bme280&) = delete;
 
-    /// Soft-reset, verify chip ID, load calibration, apply `config`.
-    Error init(const Config& config = Config{});
+    /// Soft-reset, verify chip ID, load calibration, apply the default
+    /// Config (weather monitoring). EnvironmentSensor::init().
+    Error init() override;
+
+    /// Same, but apply `config`.
+    Error init(const Config& config);
 
     /// Re-apply a configuration after init().
     Error configure(const Config& config);
@@ -51,7 +56,8 @@ public:
     Error setMode(Mode mode);
 
     /// Trigger a forced measurement, wait, read and compensate.
-    Error readForced(Measurement& out);
+    /// EnvironmentSensor::readForced().
+    Error readForced(Measurement& out) override;
 
     /// Read the latest sample (Mode::Normal, or after readForced()).
     Error read(Measurement& out);
