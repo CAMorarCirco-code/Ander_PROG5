@@ -1,8 +1,8 @@
 #pragma once
 
 // Arduino implementation of bme280::Bus on top of Wire (TwoWire).
-// Together with ArduinoI2cBus.cpp this is the only library code that includes
-// <Wire.h> / <Arduino.h>; the core only sees a Bus&.
+// Together with ArduinoClock this is the only library code that includes
+// <Wire.h> / <Arduino.h>; the core only sees a Bus& and a Clock&.
 
 #include "../../include/bme280/Bus.hpp"
 
@@ -21,8 +21,6 @@ public:
 
     /// Write `reg` followed by `len` bytes in one transmission.
     bool write(uint8_t reg, const uint8_t* data, size_t len) override;
-
-    void delayUs(uint32_t us) override;
 
 private:
     // Smallest Wire buffer across cores (AVR: 32 bytes). The Bosch driver

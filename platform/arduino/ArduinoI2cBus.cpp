@@ -42,11 +42,4 @@ bool ArduinoI2cBus::write(uint8_t reg, const uint8_t* data, size_t len)
     return wire_.endTransmission() == 0;
 }
 
-void ArduinoI2cBus::delayUs(uint32_t us)
-{
-    // delayMicroseconds() is only accurate up to ~16 ms on AVR.
-    delay(us / 1000U);
-    delayMicroseconds(static_cast<unsigned int>(us % 1000U));
-}
-
 } // namespace bme280

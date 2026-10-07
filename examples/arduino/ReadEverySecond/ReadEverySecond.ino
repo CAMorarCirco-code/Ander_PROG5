@@ -6,7 +6,8 @@
 #include <Bme280Lib.h>
 
 static bme280::ArduinoI2cBus bus(Wire, static_cast<uint8_t>(bme280::I2cAddress::Low));
-static bme280::Bme280 sensor(bus);
+static bme280::ArduinoClock sensorClock;
+static bme280::Bme280 sensor(bus, sensorClock);
 
 static const char* toString(bme280::Error e)
 {

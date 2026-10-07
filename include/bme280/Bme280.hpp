@@ -4,6 +4,7 @@
 // library's src/ folder to the include path, CMake adds include/. A relative
 // path works for both without any platform knowledge in the core.
 #include "Bus.hpp"
+#include "Clock.hpp"
 #include "Types.hpp"
 
 // The wrapper converts integer compensation results (see Bme280.cpp), so the
@@ -26,13 +27,17 @@ namespace bme280 {
 ///             (any step may return an Error and stay in its state)
 ///
 /// SRP: this class configures and reads one sensor. Byte transport lives in
-/// Bus, compensation maths lives in the Bosch code.
+/// Bus, waiting lives in Clock, compensation maths lives in the Bosch code.
+///
+/// Lifetime: `bus` and `clock` are borrowed, not owned. Both must outlive
+/// this object; the caller (sketch / main) creates them first.
 class Bme280 {
 public:
     /// Does not touch hardware; call init() for that.
-    explicit Bme280(Bus& bus);
+    Bme280(Bus& bus, Clock& clock);
 
-    // Non-copyable: the Bosch struct stores a pointer back to our bus.
+    // Non-copyable and non-movable: the Bosch struct stores a pointer back
+    // to this object (intf_ptr), which a copy or move would leave dangling.
     Bme280(const Bme280&)            = delete;
     Bme280& operator=(const Bme280&) = delete;
 
@@ -57,7 +62,7 @@ public:
     bool isInitialised() const { return initialised_; }
 
 private:
-    // --- Bridge: C callbacks that forward to Bus via intf_ptr ------------
+    // --- Bridge: C callbacks that forward to Bus/Clock via intf_ptr ------
     static int8_t readCb(uint8_t reg, uint8_t* data, uint32_t len, void* intf);
     static int8_t writeCb(uint8_t reg, const uint8_t* data, uint32_t len, void* intf);
     static void   delayCb(uint32_t us, void* intf);
@@ -66,6 +71,7 @@ private:
     static void  toBoschSettings(const Config& in, bme280_settings& out);
 
     Bus&            bus_;
+    Clock&          clock_;
     bme280_dev      dev_{};
     bme280_settings settings_{};
     bool            initialised_ = false;

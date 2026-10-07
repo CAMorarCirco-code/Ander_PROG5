@@ -10,3 +10,4 @@
 
 #include "../include/bme280/Bme280.hpp"
 #include "../platform/arduino/ArduinoI2cBus.hpp"
+#include "../platform/arduino/ArduinoClock.hpp"

@@ -62,23 +62,24 @@ uint8_t toBosch(Mode mode)
 
 // ---------------------------------------------------------------- bridge --
 // The only place where C and C++ meet. Static members have no `this`, so
-// they are valid C function pointers; `intf` carries the Bus back to us.
+// they are valid C function pointers; `intf` carries this Bme280 back to us,
+// which gives access to both the Bus and the Clock.
 
 int8_t Bme280::readCb(uint8_t reg, uint8_t* data, uint32_t len, void* intf)
 {
-    auto* bus = static_cast<Bus*>(intf);
-    return bus->read(reg, data, len) ? BME280_OK : BME280_E_COMM_FAIL;
+    auto* self = static_cast<Bme280*>(intf);
+    return self->bus_.read(reg, data, len) ? BME280_OK : BME280_E_COMM_FAIL;
 }
 
 int8_t Bme280::writeCb(uint8_t reg, const uint8_t* data, uint32_t len, void* intf)
 {
-    auto* bus = static_cast<Bus*>(intf);
-    return bus->write(reg, data, len) ? BME280_OK : BME280_E_COMM_FAIL;
+    auto* self = static_cast<Bme280*>(intf);
+    return self->bus_.write(reg, data, len) ? BME280_OK : BME280_E_COMM_FAIL;
 }
 
 void Bme280::delayCb(uint32_t us, void* intf)
 {
-    static_cast<Bus*>(intf)->delayUs(us);
+    static_cast<Bme280*>(intf)->clock_.delayUs(us);
 }
 
 // ----------------------------------------------------------- translation --
@@ -106,10 +107,10 @@ void Bme280::toBoschSettings(const Config& in, bme280_settings& out)
 
 // ------------------------------------------------------------- lifecycle --
 
-Bme280::Bme280(Bus& bus) : bus_(bus)
+Bme280::Bme280(Bus& bus, Clock& clock) : bus_(bus), clock_(clock)
 {
     dev_.intf     = BME280_I2C_INTF;
-    dev_.intf_ptr = &bus_;
+    dev_.intf_ptr = this;
     dev_.read     = &Bme280::readCb;
     dev_.write    = &Bme280::writeCb;
     dev_.delay_us = &Bme280::delayCb;
@@ -149,7 +150,7 @@ Error Bme280::readForced(Measurement& out)
     if (err != Error::None) {
         return err;
     }
-    bus_.delayUs(measurementTimeUs());
+    clock_.delayUs(measurementTimeUs());
     return read(out);
 }
 
