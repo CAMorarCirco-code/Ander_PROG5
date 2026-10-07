@@ -52,3 +52,13 @@ if(BME280_BUILD_STATION AND BME280_HAVE_MOSQUITTO)
         add_test(NAME mqtt_publisher COMMAND test_mqtt_publisher)   # broker tests SKIPPED
     endif()
 endif()
+
+if(TARGET station_main AND NOT CMAKE_CROSSCOMPILING)
+    # The composition root end to end: console, no hardware, broker down,
+    # real broker + mosquitto_sub. Exit 77 = skipped (no broker / port busy).
+    find_program(MOSQUITTO_SUB mosquitto_sub)
+    add_test(NAME station_e2e
+             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/station_e2e.sh $<TARGET_FILE:station_main>
+                     ${MOSQUITTO_BROKER} ${MOSQUITTO_SUB})
+    set_tests_properties(station_e2e PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60)
+endif()

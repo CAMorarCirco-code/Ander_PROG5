@@ -9,6 +9,8 @@ project(Bme280Lib VERSION 0.4.0 LANGUAGES C CXX)
 #   bme280_rpi_smoke                                   <- Linux only
 #   bme280_station Sampler (thread + callback),        <- any platform with
 #                  Publisher, FakeSensor, JSON            std::thread
+#   bme280_station_mqtt  MqttPublisher                 <- needs libmosquitto
+#   station_main   composition root (week 5)           <- Linux + libmosquitto
 #
 # The Arduino platform is built by the Arduino IDE / arduino-cli from
 # library.properties and src/, not by CMake.
@@ -73,6 +75,9 @@ endif()
 # --- Examples / tests --------------------------------------------------------
 if(BME280_BUILD_EXAMPLES AND BME280_BUILD_LINUX)
     add_subdirectory(examples/rpi)
+    if(BME280_BUILD_STATION AND BME280_HAVE_MOSQUITTO)
+        add_subdirectory(examples/station)
+    endif()
 endif()
 
 if(BME280_BUILD_TESTS)
