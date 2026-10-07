@@ -1,7 +1,9 @@
 #pragma once
 
-// Publisher on top of libmosquitto. Connects in the constructor, runs the
-// network loop on mosquitto's own thread, disconnects in the destructor (RAII).
+// Publisher on top of libmosquitto (RAII). The constructor starts the MQTT
+// network loop on mosquitto's own thread and *initiates* an asynchronous
+// connection to the broker; it does not wait for, or guarantee, an
+// established connection. The destructor disconnects and stops that thread.
 // mosquitto.h stays in the .cpp: users of this header (main) do not depend on
 // the MQTT library.
 //
@@ -18,7 +20,9 @@ namespace station {
 
 class MqttPublisher final : public Publisher {
 public:
-    /// Does not wait for the broker: if it is down, the network thread keeps
+    /// Starts the network loop, then initiates an asynchronous connect and
+    /// returns at once. The connection is established later on the network
+    /// thread (see isConnected()); if the broker is down, that thread keeps
     /// retrying (1 s .. 10 s back-off) and publish() returns false meanwhile.
     MqttPublisher(const std::string& host, int port, const std::string& clientId = "bme280-station");
     ~MqttPublisher() override;
