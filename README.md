@@ -18,7 +18,8 @@ platform/arduino/   ArduinoI2cBus (Wire), ArduinoClock (delay/delayMicroseconds)
 platform/linux/     LinuxI2cBus (/dev/i2c-N, ioctl), LinuxClock (clock_nanosleep)
 examples/arduino/   ReadEverySecond, CustomConfig            (Arduino sketches)
 examples/rpi/       smoke_test.cpp -> bme280_rpi_smoke       (Raspberry Pi)
-tests/              host tests: core with mocks, Linux bus with a fake ioctl, Linux platform
+tests/              host tests: core with mocks, Arduino bus with a fake Wire, Linux bus with a
+                    fake ioctl, Linux platform
 cmake/              cross-compile toolchains for Raspberry Pi OS (aarch64, armhf)
 docs/               week4_class_diagram.{puml,svg,png}
 CMakeLists.txt      core + Linux platform + examples + tests
@@ -105,9 +106,19 @@ would break substitutability:
 * A bus that throws from `read()`/`write()`, or needs a call the sensor does not know about.
   `LinuxI2cBus` only throws from its *constructor*: a `LinuxI2cBus` that exists is ready.
 
-Both bus implementations accept the same transfers (1..32 bytes read, up to 31 data bytes
-written) and return `false` outside that range, so the core sees identical behaviour on both
-platforms. The Bosch driver never transfers more than 26 bytes at once.
+Both bus implementations validate arguments identically and return `false` **without any bus
+traffic** for: a read into a null buffer, a read of 0 or more than 32 bytes, a write with a null
+buffer and `len` > 0, and a write of more than 31 data bytes (register byte + data > 32). This
+rule is spelled out in `Bus.hpp`. So the core sees the same behaviour on both platforms. The
+Bosch driver never transfers more than 26 bytes at once.
+
+| Contract point | `ArduinoI2cBus` | `LinuxI2cBus` |
+|---|---|---|
+| null buffer / bad length rejected | yes (null check added in the Week 4 review) | yes |
+| read = register pointer + repeated start + data | `endTransmission(false)`, then `requestFrom()` | one `I2C_RDWR` with 2 messages |
+| success only if exactly `len` bytes arrived | `requestFrom()` must return `len` | ioctl must report 2 messages done |
+| write = `[reg, data...]` in one transaction | one `beginTransmission`..`endTransmission()` | one message |
+| tested by | `test_arduino_platform_fake` | `test_linux_i2c_bus_fake` |
 
 ## Platforms
 
@@ -275,6 +286,14 @@ All tests are plain executables (a tiny harness in `tests/TestMain.hpp`, no exte
   bus failure, no bus traffic before `init()`, and two sensors sharing one clock. It also checks
   at compile time that `Bus` has no `delayUs()`, `Clock` has no `read()`, both have virtual
   destructors, `Bme280` needs both and is neither copyable nor movable.
+* `test_arduino_platform_fake` - the real `ArduinoI2cBus.cpp` and `ArduinoClock.cpp`
+  compiled on the host against a recording fake `Wire.h`/`Arduino.h` (`tests/fake_arduino/`,
+  on this test's include path only; the library and sketches never see them). It checks that
+  a read is `beginTransmission`, `endTransmission(false)` (repeated start), `requestFrom(addr, len)`;
+  that a short `requestFrom()` or a NACK fails without copying; that a write sends `[reg,
+  data...]` in one transmission; null buffers and bad lengths are rejected with no Wire calls;
+  and that `ArduinoClock` splits 9300 us into `delay(9)` + `delayMicroseconds(300)`. Without
+  the Week 4 review fix, `read(reg, nullptr, 1)` crashes this test (segfault).
 * `test_linux_i2c_bus_fake` - the executable defines its own `ioctl()` (and glibc's
   `__ioctl_time64`, which 32-bit time64 targets use), which the linker uses instead of libc's.
   The fake records every `I2C_RDWR` transaction. The test checks that a read is exactly
@@ -294,25 +313,29 @@ Checked in software (Week 4):
 
 | Check | Result |
 |---|---|
-| Host build, GCC 13.3, `-Wall -Wextra -Wpedantic -Werror` | clean, 3/3 test suites pass |
-| Host build, Clang, same flags | clean, 3/3 pass |
-| Core-only build (`-DBME280_BUILD_LINUX=OFF`) | clean, `test_core` passes |
-| Cross build aarch64 (Raspberry Pi OS 64-bit), `-Werror` | clean; 3/3 pass under `qemu-aarch64` |
-| Cross build armhf (Raspberry Pi OS 32-bit), `-Werror` | clean; 3/3 pass under `qemu-arm` |
-| AddressSanitizer + UndefinedBehaviorSanitizer | 3/3 pass, no reports |
-| Valgrind memcheck + `--track-fds` on all tests | no errors, no leaked fds |
-| cppcheck 2.13 (`--enable=warning,style,performance,portability`, `-DBME280_32BIT_ENABLE` as in the build) on core, Linux platform, RPi example | no findings |
+| Clean configure/build/test, GCC 13.3: `cmake -S . -B build-clean -DBME280_WARNINGS_AS_ERRORS=ON` (`-Wall -Wextra -Wpedantic -Werror`) | 0 warnings, 4/4 test suites pass |
+| Host build, Clang 18, same flags | 0 warnings, 4/4 pass |
+| Core-only build (`-DBME280_BUILD_LINUX=OFF`) | 0 warnings, `core` + `arduino_platform_fake` pass (2/2) |
+| Cross build aarch64 (Raspberry Pi OS 64-bit), `-Werror` | 0 warnings; 4/4 pass, **executed under `qemu-aarch64`** (CTest emulator) |
+| Cross build armhf (Raspberry Pi OS 32-bit), `-Werror` | 0 warnings; 4/4 pass, **executed under `qemu-arm`** (CTest emulator) |
+| AddressSanitizer + UndefinedBehaviorSanitizer | 4/4 pass, no reports |
+| Valgrind memcheck + `--track-fds` on all 4 test executables | no errors, no leaked fds |
+| cppcheck 2.13 (`--enable=warning,style,performance,portability`, `-DBME280_32BIT_ENABLE` as in the build) on core, Arduino and Linux platforms, RPi example | no findings |
 | No Arduino/Wire/Linux include, `ARDUINO`/`__linux__` macro or `ioctl` in `include/` or `src/Bme280.cpp` | confirmed by grep; `nm -u` of `libbme280_core.a` lists only Bosch symbols and `__stack_chk_fail` |
 | `bme280_rpi_smoke` (aarch64, under qemu) without hardware | clean error exit 1 for a missing `/dev/i2c-1`, for `/dev/null` (`ENOTTY`) and for an invalid address |
-| Arduino: both sketches + library for `nano_33_iot` | compile and link, no warnings from library or sketches (see below) |
+| Arduino: both Week 3 sketches + library for `nano_33_iot` with `arm-none-eabi-gcc` (not arduino-cli, see below) | compile and link, 0 warnings from library or sketches |
 
 Arduino build note: `downloads.arduino.cc` was not reachable from the build environment, so
 `arduino-cli core install` was impossible. The sketches were instead compiled and linked with
 the same recipe arduino-cli uses (`platform.txt`/`boards.txt` flags, `-std=gnu++11 -Os
 -mcpu=cortex-m0plus`, `-Wall -Wextra`) against ArduinoCore-samd 1.8.14 + ArduinoCore-API from
 GitHub, with Ubuntu's `arm-none-eabi-gcc` 13.2.1. As a control, the unchanged `v0.3-arduino`
-sketch built with the same script first. Flash use for `ReadEverySecond`: 27148 bytes (Week 3)
--> 27204 bytes (Week 4).
+sketch built with the same script first. Flash (text) for `ReadEverySecond`: 27148 bytes (Week 3)
+-> 27220 bytes (Week 4 incl. the review fix); `CustomConfig`: 27168 bytes. This proves the
+sketches compile and link against the real SAMD core headers, but it is **not** an official
+`arduino-cli`/Arduino IDE build: rerun
+`arduino-cli compile -b arduino:samd:nano_33_iot --library . examples/arduino/ReadEverySecond`
+on a machine with the SAMD core installed to confirm.
 
 **Not verified (pending hardware):**
 

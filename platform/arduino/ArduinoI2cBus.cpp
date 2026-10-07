@@ -8,7 +8,7 @@ ArduinoI2cBus::ArduinoI2cBus(TwoWire& wire, uint8_t address) : wire_(wire), addr
 
 bool ArduinoI2cBus::read(uint8_t reg, uint8_t* data, size_t len)
 {
-    if (len == 0 || len > kMaxTransfer) {
+    if (data == nullptr || len == 0 || len > kMaxTransfer) {
         return false;
     }
     wire_.beginTransmission(address_);
@@ -30,7 +30,7 @@ bool ArduinoI2cBus::write(uint8_t reg, const uint8_t* data, size_t len)
 {
     // The Bosch driver already interleaves further register/value pairs
     // into `data`, so one transmission is all it takes.
-    if (len + 1 > kMaxTransfer) {
+    if ((data == nullptr && len != 0) || len + 1 > kMaxTransfer) {
         return false;
     }
     wire_.beginTransmission(address_);

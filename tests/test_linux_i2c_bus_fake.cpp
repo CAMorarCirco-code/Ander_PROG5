@@ -201,6 +201,8 @@ void invalidLengthsAreRejectedWithoutBusTraffic()
     CHECK(!bus.read(0x88, buf, 33));
     CHECK(!bus.read(0x88, nullptr, 1));
     CHECK(!bus.write(0xF4, buf, 32));   // 32 + register byte > 32
+    CHECK(!bus.write(0xF4, nullptr, 1));
+    CHECK(g_kernel.log.empty());
     CHECK(bus.write(0xF4, buf, 31));    // exactly 32 on the wire
     CHECK(bus.read(0x88, buf, 32));
     CHECK(g_kernel.log.size() == 2);
