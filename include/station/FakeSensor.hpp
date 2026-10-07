@@ -1,0 +1,37 @@
+#pragma once
+
+// A sensor that needs no hardware: temperature ramps 20.0 .. 24.9 C in
+// 0.1 C steps (then wraps), pressure and humidity are constant. Lets the
+// whole sampling + MQTT chain run on a laptop.
+// LSP: substitutable for any EnvironmentSensor.
+
+#include "EnvironmentSensor.hpp"
+
+namespace station {
+
+class FakeSensor final : public EnvironmentSensor {
+public:
+    bme280::Error init() override
+    {
+        initialised_ = true;
+        return bme280::Error::None;
+    }
+
+    bme280::Error readForced(bme280::Measurement& out) override
+    {
+        if (!initialised_) {
+            return bme280::Error::NotInitialised;
+        }
+        out.temperatureC = 20.0F + static_cast<float>(tick_ % 50) * 0.1F;
+        out.pressurePa   = 101325.0F;
+        out.humidityPct  = 45.2F;
+        ++tick_;
+        return bme280::Error::None;
+    }
+
+private:
+    bool     initialised_ = false;
+    unsigned tick_        = 0;
+};
+
+} // namespace station

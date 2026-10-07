@@ -7,6 +7,8 @@ project(Bme280Lib VERSION 0.4.0 LANGUAGES C CXX)
 #   bme280_core    Bme280 + Bus/Clock interfaces       <- any platform
 #   bme280_linux   LinuxI2cBus + LinuxClock (i2c-dev)  <- Linux only
 #   bme280_rpi_smoke                                   <- Linux only
+#   bme280_station Sampler (thread + callback),        <- any platform with
+#                  Publisher, FakeSensor, JSON            std::thread
 #
 # The Arduino platform is built by the Arduino IDE / arduino-cli from
 # library.properties and src/, not by CMake.
@@ -23,6 +25,7 @@ else()
 endif()
 
 option(BME280_BUILD_LINUX       "Build the Linux i2c-dev platform (LinuxI2cBus, LinuxClock)" ${_bme280_is_linux})
+option(BME280_BUILD_STATION     "Build the week-5 station layer (Sampler, publishers)"         ON)
 option(BME280_BUILD_EXAMPLES    "Build example applications"                                ${_bme280_top_level})
 option(BME280_BUILD_TESTS       "Build host tests"                                          ${_bme280_top_level})
 option(BME280_WARNINGS_AS_ERRORS "Treat compiler warnings as errors"                        OFF)
@@ -55,6 +58,12 @@ add_library(bme280::core ALIAS bme280_core)
 target_include_directories(bme280_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(bme280_core PUBLIC bme280_bosch)
 bme280_set_warnings(bme280_core)
+
+# --- Station (week 5) -------------------------------------------------------
+if(BME280_BUILD_STATION)
+    find_package(Threads REQUIRED)
+    add_subdirectory(station)
+endif()
 
 # --- Platforms ---------------------------------------------------------------
 if(BME280_BUILD_LINUX)

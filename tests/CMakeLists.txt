@@ -30,3 +30,11 @@ if(BME280_BUILD_LINUX)
     bme280_set_warnings(test_linux_platform)
     add_test(NAME linux_platform COMMAND test_linux_platform)
 endif()
+
+if(BME280_BUILD_STATION)
+    # Sampler lifecycle/threading, FakeSensor, JSON - no hardware, no broker.
+    add_executable(test_station test_station.cpp)
+    target_link_libraries(test_station PRIVATE bme280_station)
+    bme280_set_warnings(test_station)
+    add_test(NAME station COMMAND test_station)
+endif()
