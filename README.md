@@ -2,32 +2,273 @@
 
 C++ library for the Bosch BME280 (temperature, pressure, humidity). The Bosch BME280 SensorAPI
 is wrapped in a class that talks to two abstractions, `Bus` and `Clock`, so the sensor code does
-not depend on any particular board. This is the **Week 4** state: the same, unchanged core runs
-on Arduino (Week 3) and on a Raspberry Pi through Linux `i2c-dev`.
+not depend on any particular board. The same core runs on Arduino (Week 3) and on a Raspberry Pi
+through Linux `i2c-dev` (Week 4).
 
-The Week 3 state is preserved in the tag `v0.3-arduino`.
+This is the **Week 5** state: a weather station program samples the sensor once per second on
+its own thread and publishes every measurement as JSON over MQTT, while the sensor class still
+knows nothing about MQTT, threads or JSON.
+
+Earlier hand-ins are preserved in the tags `v0.3-arduino` (Week 3) and `v0.4-pi` (Week 4).
 
 ## Structure
 
 ```
 include/bme280/     Bus.hpp, Clock.hpp (interfaces), Types.hpp, Bme280.hpp   <- core
+include/station/    EnvironmentSensor.hpp (interface, implemented by Bme280)  <- week 5
+                    Sampler, Publisher, ConsolePublisher, MqttPublisher, FakeSensor, Json
 src/                Bme280.cpp (wraps the Bosch C driver)                    <- core
                     Bme280Lib.h, arduino_glue_*.{c,cpp}   <- Arduino IDE build glue (see below)
 third_party/bme280/ Bosch BME280 SensorAPI v3.5.1, vendored unmodified (BSD-3-Clause)
 platform/arduino/   ArduinoI2cBus (Wire), ArduinoClock (delay/delayMicroseconds)
 platform/linux/     LinuxI2cBus (/dev/i2c-N, ioctl), LinuxClock (clock_nanosleep)
+station/            Sampler.cpp (thread), MqttPublisher.cpp (libmosquitto)  <- week 5
 examples/arduino/   ReadEverySecond, CustomConfig            (Arduino sketches)
 examples/rpi/       smoke_test.cpp -> bme280_rpi_smoke       (Raspberry Pi)
+examples/station/   station_main.cpp -> station_main         (week 5 composition root)
 tests/              host tests: core with mocks, Arduino bus with a fake Wire, Linux bus with a
                     fake ioctl, Linux platform
 cmake/              cross-compile toolchains for Raspberry Pi OS (aarch64, armhf)
-docs/               week4_class_diagram.{puml,svg,png}
+docs/               week4_class_diagram.{puml,svg,png}, week5_sequence_diagram.{puml,svg,png}
 CMakeLists.txt      core + Linux platform + examples + tests
 library.properties  Arduino library metadata
 ```
 
 The core (`include/bme280/*`, `src/Bme280.cpp`, `third_party/`) includes no Arduino, Wire or
 Linux header, uses no `#ifdef` to tell platforms apart, and builds with any C++17 compiler.
+
+## Week 5: sampling thread, callback, MQTT
+
+```
+station_main (composition root, the only place concrete classes meet)
+   |
+   |  EnvironmentSensor&            callback (lambda)              Publisher&
+   v                                                                   |
+Sampler --readForced()--> EnvironmentSensor <|-- Bme280 (Bus, Clock)   |
+   |  own std::thread              <|-- FakeSensor                   v
+   +--callback(m)--> lambda: publisher.publish(topic, toJson(m)) --> Publisher
+                                                         <|-- MqttPublisher --> broker
+                                                         <|-- ConsolePublisher
+```
+
+### Dependency Inversion
+
+`Sampler` needs *something* it can call `readForced()` on. It depends on the interface
+`station::EnvironmentSensor` (`init()`, `readForced(Measurement&)`), and `bme280::Bme280`
+implements that interface: **Sampler -> EnvironmentSensor <- Bme280**. Neither the sampler nor
+the sensor knows the other's concrete type. The same holds for the output: the callback only sees
+`station::Publisher` (`bool publish(const std::string& topic, const std::string& payload)`),
+implemented by `MqttPublisher` (libmosquitto) and `ConsolePublisher` (prints).
+
+What the interface buys: `FakeSensor` (a temperature ramp 20.0, 20.1, ... 24.9 C, constant
+101325 Pa and 45.2 %RH) replaces the BME280, and the **whole MQTT chain runs on a laptop with no
+Pi and no sensor** - see the capture below and `test_mqtt_publisher`.
+
+The only change to the Week 4 class: `Bme280` derives from `EnvironmentSensor`, `readForced()`
+gets `override`, and `init(const Config& = Config{})` became `init()` (the override) plus
+`init(const Config&)`, because a defaulted parameter cannot override a parameterless virtual.
+Calls `init()` and `init(config)` compile and behave exactly as before. `EnvironmentSensor` uses
+relative includes like the core headers, so the Arduino sketches still build.
+
+The sensor class contains no sampling period, threads, JSON or MQTT: its only wait is the
+measurement time inside `readForced()` (through `Clock`), never a `sleep_for(1 s)`. The period
+lives in the `Sampler`, the JSON in `toJson()`, the topic in `main()`.
+
+### Composition root
+
+`examples/station/station_main.cpp` is the only file that names concrete classes:
+
+```cpp
+bme280::LinuxI2cBus bus(0x76);                 // /dev/i2c-1      (or: station::FakeSensor sensor;)
+bme280::LinuxClock  sysClock;                  // not `clock`: C already owns that name
+bme280::Bme280      sensor(bus, sysClock);
+station::MqttPublisher publisher("localhost", 1883);   // (or: station::ConsolePublisher)
+station::Sampler    sampler(sensor, std::chrono::seconds(1));
+sampler.onMeasurement([&](const bme280::Measurement& m) {        // the lambda is the callback
+    if (!publisher.publish(topic, station::toJson(m))) { /* "publish failed (broker down?)" */ }
+});
+sampler.start();
+sigwait(&stopSignals, &signal);                // main sleeps until Ctrl+C / SIGTERM
+sampler.stop();
+```
+
+* **No `#ifdef`**: `--fake` and `--console` choose the sensor and publisher at run time.
+* **No globals, no singletons**: `SIGINT`/`SIGTERM` are blocked before any thread is created and
+  `main` waits for them with `sigwait()`, so no signal handler has to set a global flag.
+* `Sampler` receives `EnvironmentSensor&`, never `Bme280&`.
+
+```
+station_main                    BME280 on /dev/i2c-1 @ 0x76, MQTT to localhost:1883
+station_main --fake             FakeSensor instead of the BME280 (laptop)
+station_main --console          print "topic payload" instead of MQTT
+station_main --fake --console   no hardware, no broker
+```
+
+### Topic scheme and payload
+
+| | |
+|---|---|
+| Topic | `han/ese/ander/bme280/state` (`han/ese/<name>/<sensor>/state`) |
+| Payload | `{"t":21.37,"p":101325,"h":45.2}` - `t` in degC (2 decimals), `p` in Pa (0 decimals), `h` in %RH (1 decimal) |
+| QoS / retain | 0 / not retained |
+| Rate | one message per second |
+
+### Broker on the Pi
+
+```bash
+sudo apt install mosquitto mosquitto-clients libmosquitto-dev
+sudo systemctl enable --now mosquitto        # start now and at every boot
+systemctl status mosquitto                   # "active (running)"
+mosquitto_sub -h localhost -t 'han/ese/#' -v # leave running in a second terminal
+```
+
+Mosquitto 2.x only listens on localhost by default. To subscribe from a laptop, add
+`listener 1883` and `allow_anonymous true` to `/etc/mosquitto/conf.d/lab.conf` and
+`sudo systemctl restart mosquitto`.
+
+Build and run on the Pi (I2C enabled, BME280 at 0x76, see "Raspberry Pi - native build" below):
+
+```bash
+cmake -S . -B build && cmake --build build -j
+./build/examples/station/station_main          # Ctrl+C to stop
+```
+
+### `mosquitto_sub` capture
+
+Captured on the **development laptop (x86-64 Linux), not on a Pi**: `station_main --fake` (the
+`FakeSensor` ramp) publishing to a local mosquitto 2.0.18, subscribed exactly as the assignment
+says:
+
+```
+$ mosquitto_sub -h localhost -t 'han/ese/#' -v
+han/ese/ander/bme280/state {"t":20.10,"p":101325,"h":45.2}
+han/ese/ander/bme280/state {"t":20.20,"p":101325,"h":45.2}
+han/ese/ander/bme280/state {"t":20.30,"p":101325,"h":45.2}
+han/ese/ander/bme280/state {"t":20.40,"p":101325,"h":45.2}
+han/ese/ander/bme280/state {"t":20.50,"p":101325,"h":45.2}
+```
+
+The first sample (t = 20.00) is not in the capture: it is taken at t = 0, while the asynchronous
+connect to the broker is still in progress, so `publish()` returns `false` for it and the station
+prints `publish failed (broker down?)` once. That is the same broker-down path as below.
+
+With the broker stopped, the station keeps sampling and prints `publish failed (broker down?)`
+once per second; when the broker comes back, libmosquitto reconnects (1..10 s back-off) and
+publishing resumes - tested in `test_mqtt_publisher` (`brokerRestartWhileSampling`) and
+`station_e2e`.
+
+### Threads: what can go wrong?
+
+`station_main` runs three threads: **main** (set-up, then blocked in `sigwait()`), the **sampler
+thread** (owned by `Sampler`: `readForced()`, then the callback - so `toJson()` and
+`publisher.publish()` also run there), and **mosquitto's network thread** (started by
+`MqttPublisher`, sends the queued messages and runs its connect/disconnect callbacks).
+
+**Shared state: `MqttPublisher::connected_`.** It is written by mosquitto's network thread (in
+`onConnect`/`onDisconnect`, when the broker comes and goes) and read by the sampler thread in
+every `publish()`. A plain `bool` would be a data race (undefined behaviour). It is a
+`std::atomic<bool>`: a single flag with no invariant tied to other data, so an atomic is enough
+and no mutex is needed. `mosquitto_publish()` itself may be called from the sampler thread
+because libmosquitto protects its own outgoing queue when the network loop runs on its thread
+(`mosquitto_loop_start`).
+
+Other state, and why it is safe:
+
+* **The sensor (and its `Bus`)** is not thread-safe and does not need to be: it has one owner at a
+  time. `main` calls `init()` *before* `start()`; between `start()` and `stop()` only the sampler
+  thread calls `readForced()`. `test_station` checks that two `readForced()` calls never overlap.
+* **`Sampler::running_` and the callback** are shared between the owner (`start/stop/onMeasurement`)
+  and the sampler thread: both are guarded by the sampler's mutex. `running_` is changed *under*
+  the mutex in `stop()`; otherwise the flag could change between the thread checking it and
+  starting to wait, the notify would be lost and `stop()` would wait a full period.
+* **`topic`** is a `const std::string` that is never written after the thread starts, so reading
+  it from the callback needs no protection.
+
+**Bonus - `stop()` within one period, even with a slow sensor.** The thread sleeps in
+`condition_variable::wait_until(next deadline)`; `stop()` notifies it, so `stop()` never waits out
+the rest of a period. If a read is in progress, `stop()` waits for that read only and starts no
+new one (`test_station`: 300 ms read, 1 s period -> `stop()` returns after the read, well within one
+period). A read that *never* returns cannot be interrupted safely - the thread is never detached,
+because it uses the sampler, the sensor and the callback, which would be destroyed under it.
+
+The period is counted from the start (`next += period`), so a 30 ms read does not stretch a
+100 ms period to 130 ms (`test_station: periodDoesNotDriftWithReadTime`).
+
+### Sequence diagram
+
+![Sequence diagram, one sampling cycle](docs/week5_sequence_diagram.png)
+
+([PlantUML source](docs/week5_sequence_diagram.puml), [SVG](docs/week5_sequence_diagram.svg))
+One cycle: `Sampler` -> `EnvironmentSensor` -> `Bme280` -> `Bus`/`Clock` -> back -> callback ->
+`Publisher` -> `MqttPublisher` -> libmosquitto -> broker. The blue activation bar is the sampler
+thread; `main` is blocked in `sigwait()` and is not on it. The `PUBLISH` to the broker happens
+on mosquitto's network thread.
+
+### Differences from the course starter (`Code/week5/mqtt_station`)
+
+* Starter `main.cpp` uses `#ifdef STATION_HAS_HARDWARE` and a global `keepRunning` flag; the
+  assignment forbids both, so the choice is made at run time and Ctrl+C goes through `sigwait()`.
+* `Sampler`: `running_` set under the mutex (lost wake-up), callback copied under the mutex
+  (`onMeasurement()` while running is not a data race), deadlines instead of sleeping a full period
+  after each read (no drift). Same public API.
+* `MqttPublisher`: `mosquitto_loop_start()` is called **before** `mosquitto_connect_async()`. With
+  libmosquitto 2.0.18 a first connect that fails before the loop runs is never retried, so the
+  starter order never connects if the broker is down when the station starts (reproduced; the
+  `brokerDownAtStartThenComesUp` test fails with the starter order).
+* `toJson()` moved from `main.cpp` to `include/station/Json.hpp` so it can be unit-tested; same
+  format string. `FakeSensor` also sets humidity (45.2 %RH; the starter left it 0).
+* `Bme280` implements `EnvironmentSensor` directly, so the starter's `Bme280Adapter` is not needed.
+
+### Week 5 tests
+
+* `test_station` (13 tests): `FakeSensor` ramp; exact JSON (assignment example, negative,
+  rounding); callback on the sampler thread (not main, always the same thread) with the ramp in
+  order; no callback after `stop()` returns; destructor stops and joins; double `start()`/`stop()`,
+  `stop()` before `start()`, restart; failed reads skip the callback but sampling goes on; no
+  overlapping `readForced()` (period shorter than the read); `stop()` does not wait out a 10 s
+  period; slow sensor (bonus); no drift; replacing the callback while running; no callback set.
+* `test_mqtt_publisher` (6 tests): broker down (constructor returns at once, `publish()` false,
+  destructor quick); sampler keeps sampling with the broker down; then, with a **real mosquitto**
+  the test starts on a free port: exact topic + payload, full chain `FakeSensor -> Sampler ->
+  lambda -> toJson -> MqttPublisher -> broker -> subscriber` in order, broker down at start then
+  up, broker killed and restarted while sampling. Without a broker binary these four are reported
+  `SKIP`, not passed.
+* `station_e2e` (`tests/station_e2e.sh`, runs `station_main` itself): `--fake --console` output,
+  clean error without `/dev/i2c-1`, broker down, and a real broker on `:1883` checked with
+  `mosquitto_sub -t 'han/ese/#' -v`. Exit 77 (= skipped) if no broker or the port is taken.
+* `test_core` additionally checks that `Bme280` is an `EnvironmentSensor` and works through it.
+
+### Week 5 verification status
+
+Checked in software on an x86-64 Linux host (Ubuntu 24.04, GCC 13.3, Clang 18.1.3, CMake
+3.28, mosquitto/libmosquitto 2.0.18), all builds with `-Wall -Wextra -Wpedantic -Werror`:
+
+| Check | Result |
+|---|---|
+| Clean configure/build/test, GCC (`build-clean`) | 0 warnings; 7/7 suites pass (`core`, `arduino_platform_fake`, `linux_i2c_bus_fake`, `linux_platform`, `station`, `mqtt_publisher`, `station_e2e`), none skipped |
+| Clang, same flags | 0 warnings; 7/7 pass |
+| Core + station without the Linux layer (`-DBME280_BUILD_LINUX=OFF`) | 0 warnings; 4/4 pass |
+| AddressSanitizer + UndefinedBehaviorSanitizer | 7/7 pass, no reports |
+| **ThreadSanitizer** (whole suite, incl. real-broker tests and `station_main`) | 7/7 pass, 0 reports |
+| Valgrind memcheck + `--track-fds` (`test_core`, `test_station`, `test_mqtt_publisher` with broker, `station_main --fake --console`) | 0 errors, 0 leaks, 0 leaked fds |
+| cppcheck 2.13 on core, station, `station_main`, Linux platform | 0 findings |
+| Real MQTT round trip on this host: `station_main --fake` -> mosquitto -> `mosquitto_sub -t 'han/ese/#' -v` | capture above |
+| Broker down (at start, and killed + restarted while sampling) | `publish()` false, sampling continues, reconnects |
+| Cross build aarch64 / armhf | 0 warnings; 5/5 pass under `qemu-aarch64` / `qemu-arm`. `MqttPublisher` and `station_main` **not** cross-built: no ARM libmosquitto in this environment (they build natively on the Pi) |
+| Week 3 Arduino sketches (`nano_33_iot`, arm-none-eabi-gcc, same recipe as Week 4) | compile and link, 0 library/sketch warnings; flash 27292 B (`ReadEverySecond`, was 27220 B: +72 B for the vtable) |
+| Week 4 tests and `bme280_rpi_smoke` | unchanged results |
+| Tests catch the starter's bugs (checked by re-introducing each) | drift -> `periodDoesNotDriftWithReadTime` fails; no notify in `stop()` -> `stopDoesNotWaitOutThePeriod` fails; starter connect order -> `brokerDownAtStartThenComesUp` fails |
+
+**Not verified (pending hardware):** no Raspberry Pi and no BME280 were available. `station_main`
+has not run with the real sensor, the Pi's mosquitto service, or over a real I2C bus; the capture
+above comes from the `FakeSensor` on a laptop. To complete it on the Pi:
+
+```bash
+./build/examples/station/station_main &            # real BME280 @ 0x76
+mosquitto_sub -h localhost -t 'han/ese/#' -v       # expect plausible room values once per second
+```
+
+and paste that capture here.
 
 ## Week 4: Bus/Clock split
 
@@ -190,6 +431,9 @@ outlive it (locals are destroyed in reverse order); the sensor only borrows them
 | `bme280_core`      | `Bme280` + `Bus`/`Clock` (C++17)           | always                         |
 | `bme280_linux`     | `LinuxI2cBus`, `LinuxClock`                | `BME280_BUILD_LINUX` (default: on when targeting Linux) |
 | `bme280_rpi_smoke` | Raspberry Pi smoke test                    | `BME280_BUILD_EXAMPLES` + Linux |
+| `bme280_station`   | `Sampler` (+ header-only `Publisher`, `ConsolePublisher`, `FakeSensor`, `toJson`) | `BME280_BUILD_STATION` (default on) |
+| `bme280_station_mqtt` | `MqttPublisher` - the only target linking libmosquitto | libmosquitto found |
+| `station_main`     | week-5 composition root                    | `BME280_BUILD_EXAMPLES` + Linux + libmosquitto |
 | `test_*`           | host tests (CTest)                         | `BME280_BUILD_TESTS`           |
 
 The platform is picked in CMake (which subdirectory is added), never inside the core.
@@ -307,7 +551,7 @@ All tests are plain executables (a tiny harness in `tests/TestMain.hpp`, no exte
   at least the requested time (0 us .. 1.5 s), and still does with `SIGALRM` interrupting it
   every 2 ms.
 
-## Verification status
+## Verification status (Week 4)
 
 Checked in software (Week 4):
 

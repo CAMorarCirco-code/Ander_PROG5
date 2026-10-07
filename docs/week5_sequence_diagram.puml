@@ -1,0 +1,87 @@
+@startuml week5_sequence_diagram
+' Week 5: one sampling cycle of station_main (real sensor, MQTT).
+' Matches examples/station/station_main.cpp, station/Sampler.cpp,
+' src/Bme280.cpp and station/MqttPublisher.cpp.
+title station_main - one sampling cycle (period 1 s)
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 260
+hide footbox
+
+participant "main()\n<i>main thread</i>" as main
+box "used by the sampler thread during a cycle" #EAF2FF
+  participant ":Sampler" as sampler
+  participant "<<interface>>\n:EnvironmentSensor" as env
+  participant "sensor:\nBme280" as bme
+  participant "<<interface>>\n:Bus\n(LinuxI2cBus)" as bus
+  participant "<<interface>>\n:Clock\n(LinuxClock)" as clk
+  participant "callback\n(lambda from main)" as cb
+  participant "<<interface>>\n:Publisher" as pub
+  participant "publisher:\nMqttPublisher" as mqtt
+end box
+box "mosquitto network thread" #F3F3F3
+  participant "libmosquitto" as lib
+end box
+participant "MQTT broker\n(mosquitto)" as broker
+
+== start-up (main thread) ==
+activate main
+main -> env : init()\n<i>before the thread exists</i>
+main -> sampler : onMeasurement(lambda)
+main -> sampler : start()
+sampler -> sampler : spawn std::thread(&Sampler::run)
+main -> main : sigwait(SIGINT, SIGTERM)
+note right of main
+  main is blocked here for the
+  whole run. It is **not** on the
+  sampler thread's activation and
+  never calls the sensor.
+end note
+deactivate main
+
+== one cycle, every period, on the sampler thread ==
+activate sampler #B7D3FF
+sampler -> env : readForced(m)
+activate env
+env -> bme : virtual dispatch\n(same object)
+activate bme
+bme -> bus : write(0xF4, ctrl_meas = forced)\n<i>via Bosch driver</i>
+bus --> bme : true
+bme -> clk : delayUs(measurementTimeUs())
+clk --> bme
+bme -> bus : read(0xF7, data, 8)\n<i>reg, repeated start, 8 bytes</i>
+bus --> bme : true
+bme -> bme : compensate (Bosch, 32-bit)
+bme --> env : Error::None, m
+deactivate bme
+env --> sampler : Error::None, m
+deactivate env
+
+sampler -> cb : callback(m)
+activate cb
+cb -> cb : json = toJson(m)\n{"t":21.37,"p":101325,"h":45.2}
+cb -> pub : publish("han/ese/ander/bme280/state", json)
+activate pub
+pub -> mqtt : virtual dispatch
+activate mqtt
+mqtt -> lib : mosquitto_publish(QoS 0)\n<i>queue only, never blocks</i>
+lib --> mqtt : MOSQ_ERR_SUCCESS
+mqtt --> pub : true\n(false if broker down)
+deactivate mqtt
+pub --> cb : true / false
+deactivate pub
+cb --> sampler
+deactivate cb
+
+lib ->> broker : PUBLISH han/ese/ander/bme280/state
+note right of lib : asynchronous, on mosquitto's\nthread, not the sampler's
+
+sampler -> sampler : wait_until(next deadline)\nor until stop()
+deactivate sampler
+
+== shutdown (Ctrl+C) ==
+activate main
+main -> sampler : stop()\n<i>on main: running_ = false,</i>\n<i>notify, join the thread</i>
+main -> mqtt : ~MqttPublisher(): disconnect, loop_stop
+deactivate main
+@enduml
