@@ -1,0 +1,3 @@
+add_executable(bme280_rpi_smoke smoke_test.cpp)
+target_link_libraries(bme280_rpi_smoke PRIVATE bme280_linux)
+bme280_set_warnings(bme280_rpi_smoke)

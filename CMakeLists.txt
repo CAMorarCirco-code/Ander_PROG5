@@ -62,6 +62,10 @@ if(BME280_BUILD_LINUX)
 endif()
 
 # --- Examples / tests --------------------------------------------------------
+if(BME280_BUILD_EXAMPLES AND BME280_BUILD_LINUX)
+    add_subdirectory(examples/rpi)
+endif()
+
 if(BME280_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
