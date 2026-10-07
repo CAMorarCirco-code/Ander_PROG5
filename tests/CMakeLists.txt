@@ -38,3 +38,17 @@ if(BME280_BUILD_STATION)
     bme280_set_warnings(test_station)
     add_test(NAME station COMMAND test_station)
 endif()
+
+if(BME280_BUILD_STATION AND BME280_HAVE_MOSQUITTO)
+    # MqttPublisher: broker down, and a real broker the test starts itself.
+    add_executable(test_mqtt_publisher test_mqtt_publisher.cpp)
+    target_include_directories(test_mqtt_publisher PRIVATE ${MOSQUITTO_INCLUDE_DIR})
+    target_link_libraries(test_mqtt_publisher PRIVATE bme280_station_mqtt ${MOSQUITTO_LIBRARY})
+    bme280_set_warnings(test_mqtt_publisher)
+    find_program(MOSQUITTO_BROKER mosquitto PATHS /usr/sbin /usr/local/sbin /opt/homebrew/sbin)
+    if(MOSQUITTO_BROKER AND NOT CMAKE_CROSSCOMPILING)
+        add_test(NAME mqtt_publisher COMMAND test_mqtt_publisher ${MOSQUITTO_BROKER})
+    else()
+        add_test(NAME mqtt_publisher COMMAND test_mqtt_publisher)   # broker tests SKIPPED
+    endif()
+endif()
