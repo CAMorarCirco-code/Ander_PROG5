@@ -56,6 +56,11 @@ target_include_directories(bme280_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/includ
 target_link_libraries(bme280_core PUBLIC bme280_bosch)
 bme280_set_warnings(bme280_core)
 
+# --- Platforms ---------------------------------------------------------------
+if(BME280_BUILD_LINUX)
+    add_subdirectory(platform/linux)
+endif()
+
 # --- Examples / tests --------------------------------------------------------
 if(BME280_BUILD_TESTS)
     enable_testing()
