@@ -30,7 +30,7 @@ tests/              host tests: core with mocks, Arduino bus with a fake Wire, L
                     fake ioctl, Linux platform
 cmake/              cross-compile toolchains for Raspberry Pi OS (aarch64, armhf)
 docs/               week4_class_diagram.{puml,svg,png}, week5_sequence_diagram.{puml,svg,png}
-CMakeLists.txt      core + Linux platform + examples + tests
+CMakeLists.txt      core + Linux platform + station (week 5) + examples + tests
 library.properties  Arduino library metadata
 ```
 
@@ -277,11 +277,12 @@ and paste that capture here.
 ([PlantUML source](docs/week4_class_diagram.puml), [SVG](docs/week4_class_diagram.svg))
 
 ```
-Bme280 --> Bus                 ArduinoI2cBus --|> Bus      LinuxI2cBus --|> Bus
-Bme280 --> Clock               ArduinoClock  --|> Clock    LinuxClock  --|> Clock
+Bme280 ..> Bus                 ArduinoI2cBus ..|> Bus      LinuxI2cBus ..|> Bus
+Bme280 ..> Clock               ArduinoClock  ..|> Clock    LinuxClock  ..|> Clock
 ```
 
-All arrows point *into* the core: the platform classes depend on the abstractions, the core
+`..>` is a dependency ("uses"), `..|>` a realization ("implements"), both dashed as UML
+prescribes. All arrows point *into* the core: the platform classes depend on the abstractions, the core
 never depends on a platform (Dependency Inversion). Nothing in `include/` or `src/Bme280.cpp`
 names Arduino or Linux.
 
@@ -323,6 +324,18 @@ be forced to provide them.
   without sleeping.
 * **Smaller contracts are easier to substitute (LSP, below).** A bus implementation now only
   has to get bytes right; a clock only has to wait long enough.
+
+## Design (Week 3)
+
+*As handed in with `v0.3-arduino`. Since Week 4 the core also receives a `Clock&` next to the
+`Bus&` (see "Week 4: Bus/Clock split" above); the reasoning is unchanged.*
+
+The core (`include/`, `src/Bme280.cpp`) only knows the abstract `Bus`, so it builds on any
+platform with a C++17 compiler and can be tested on a laptop with a mock bus. `Wire` is an
+Arduino detail: putting it in the sensor class would tie the sensor to one board family, and
+next week the same sensor has to run on a Raspberry Pi through Linux `i2c-dev`. Whoever owns
+the bus (the sketch) creates it and calls `Wire.begin()`; the sensor only receives a `Bus&`
+and uses it.
 
 ## LSP check
 

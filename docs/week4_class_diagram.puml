@@ -51,14 +51,14 @@ package "platform/linux" as linux {
   class LinuxClock <<final>>
 }
 
-Bme280 -down-> Bus   : uses
-Bme280 -down-> Clock : uses
+Bme280 .down.> Bus   : uses
+Bme280 .down.> Clock : uses
 Bme280 .right.> Bosch : wraps
 
-ArduinoI2cBus -up-|> Bus
-LinuxI2cBus   -up-|> Bus
-ArduinoClock  -up-|> Clock
-LinuxClock    -up-|> Clock
+ArduinoI2cBus .up.|> Bus
+LinuxI2cBus   .up.|> Bus
+ArduinoClock  .up.|> Clock
+LinuxClock    .up.|> Clock
 
 note bottom of linux
   read(): one I2C_RDWR ioctl
