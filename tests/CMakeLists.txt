@@ -62,3 +62,22 @@ if(TARGET station_main AND NOT CMAKE_CROSSCOMPILING)
                      ${MOSQUITTO_BROKER} ${MOSQUITTO_SUB})
     set_tests_properties(station_e2e PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60)
 endif()
+
+if(BME280_BUILD_STATION)
+    # Week 7, assignment 7: required unit tests with doctest (fetched by CMake,
+    # as in the week-2 starter). Offline: pass
+    # -DFETCHCONTENT_SOURCE_DIR_DOCTEST=/path/to/doctest-2.4.11
+    include(FetchContent)
+    FetchContent_Declare(doctest
+        GIT_REPOSITORY https://github.com/doctest/doctest.git
+        GIT_TAG        v2.4.11
+        GIT_SHALLOW    TRUE)
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)   # doctest 2.4.11 declares cmake_minimum_required(3.0)
+    set(DOCTEST_NO_INSTALL ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(doctest)
+
+    add_executable(test_unit test_unit.cpp)
+    target_link_libraries(test_unit PRIVATE bme280_station doctest::doctest)
+    bme280_set_warnings(test_unit)
+    add_test(NAME unit COMMAND test_unit)
+endif()
