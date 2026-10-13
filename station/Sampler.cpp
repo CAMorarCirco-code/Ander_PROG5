@@ -4,7 +4,15 @@
 
 namespace station {
 
-Sampler::Sampler(bme280::EnvironmentSensor& sensor, std::chrono::milliseconds period) : sensor_(sensor), period_(period) {}
+Sampler::Sampler(std::vector<bme280::EnvironmentSensor*> sensors, std::chrono::milliseconds period)
+    : sensors_(std::move(sensors)), period_(period)
+{
+}
+
+Sampler::Sampler(bme280::EnvironmentSensor& sensor, std::chrono::milliseconds period)
+    : Sampler(std::vector<bme280::EnvironmentSensor*>{&sensor}, period)
+{
+}
 
 Sampler::~Sampler()
 {
@@ -48,6 +56,12 @@ bool Sampler::isRunning() const
     return running_;
 }
 
+bool Sampler::keepRunning()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return running_;
+}
+
 void Sampler::run()
 {
     auto next = std::chrono::steady_clock::now();
@@ -61,14 +75,20 @@ void Sampler::run()
             callback = callback_;   // copy: onMeasurement() may replace it meanwhile
         }
 
-        bme280::Measurement m;
-        if (sensor_.readForced(m) == bme280::Error::None && callback) {
-            callback(m);            // sampler thread, not main
+        // One cycle: every sensor once, in order, through the interface only.
+        for (std::size_t i = 0; i < sensors_.size(); ++i) {
+            if (i > 0 && !keepRunning()) {
+                return;             // stop() during a cycle: do not start the next read
+            }
+            bme280::Measurement m;
+            if (sensors_[i] != nullptr && sensors_[i]->readForced(m) == bme280::Error::None && callback) {
+                callback(i, m);     // sampler thread, not main
+            }
         }
 
-        // Next deadline counted from the start, so a slow read does not
-        // shift every later sample. If we are already late, do not try to
-        // catch up with a burst of reads.
+        // Next deadline counted from the start, so slow reads do not shift
+        // every later cycle. If we are already late, do not try to catch up
+        // with a burst of cycles.
         next += period_;
         const auto now = std::chrono::steady_clock::now();
         if (next < now) {

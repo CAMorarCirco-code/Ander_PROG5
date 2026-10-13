@@ -30,6 +30,9 @@ using bme280::Measurement;
 static_assert(!std::is_copy_constructible<station::Sampler>::value, "Sampler owns a thread");
 static_assert(std::is_constructible<station::Sampler, bme280::EnvironmentSensor&, std::chrono::milliseconds>::value,
               "Sampler depends on the interface");
+static_assert(std::is_constructible<station::Sampler, std::vector<bme280::EnvironmentSensor*>,
+                                    std::chrono::milliseconds>::value,
+              "week 6: Sampler takes a collection of EnvironmentSensor*");
 static_assert(std::is_abstract<bme280::EnvironmentSensor>::value && std::is_abstract<station::Publisher>::value,
               "interfaces");
 
@@ -141,7 +144,7 @@ void callbackRunsOnSamplerThreadWithRamp()
     CHECK(sensor.init() == Error::None);
     Recorder rec;
     station::Sampler sampler(sensor, 10ms);
-    sampler.onMeasurement([&](const Measurement& m) { rec(m); });
+    sampler.onMeasurement([&](std::size_t, const Measurement& m) { rec(m); });
     CHECK(!sampler.isRunning());
     sampler.start();
     CHECK(sampler.isRunning());
@@ -163,7 +166,7 @@ void noCallbackAfterStopReturns()
     (void)sensor.init();
     Recorder rec;
     station::Sampler sampler(sensor, 5ms);
-    sampler.onMeasurement([&](const Measurement& m) { rec(m); });
+    sampler.onMeasurement([&](std::size_t, const Measurement& m) { rec(m); });
     sampler.start();
     CHECK(rec.waitFor(3));
     sampler.stop();
@@ -180,7 +183,7 @@ void destructorStopsAndJoins()
     Recorder rec;
     {
         station::Sampler sampler(sensor, 5ms);
-        sampler.onMeasurement([&](const Measurement& m) { rec(m); });
+        sampler.onMeasurement([&](std::size_t, const Measurement& m) { rec(m); });
         sampler.start();
         CHECK(rec.waitFor(2));
     }   // ~Sampler: no stop() call by the test
@@ -196,7 +199,7 @@ void startStopAreIdempotentAndRestartable()
     Recorder rec;
     station::Sampler sampler(sensor, 5ms);
     sampler.stop();                        // stop before start: no-op
-    sampler.onMeasurement([&](const Measurement& m) { rec(m); });
+    sampler.onMeasurement([&](std::size_t, const Measurement& m) { rec(m); });
     sampler.start();
     sampler.start();                       // second start: no second thread
     CHECK(rec.waitFor(3));
@@ -224,7 +227,7 @@ void failedReadsSkipCallbackButSamplingContinues()
     sensor.failEvery = 2;                  // reads 2, 4, 6, ... fail
     Recorder rec;
     station::Sampler sampler(sensor, 5ms);
-    sampler.onMeasurement([&](const Measurement& m) { rec(m); });
+    sampler.onMeasurement([&](std::size_t, const Measurement& m) { rec(m); });
     sampler.start();
     CHECK(rec.waitFor(5));
     sampler.stop();
@@ -241,7 +244,7 @@ void sensorIsNeverReadConcurrently()
     sensor.readTime = 2ms;
     Recorder rec;
     station::Sampler sampler(sensor, 1ms);  // period shorter than the read
-    sampler.onMeasurement([&](const Measurement& m) { rec(m); });
+    sampler.onMeasurement([&](std::size_t, const Measurement& m) { rec(m); });
     sampler.start();
     CHECK(rec.waitFor(20));
     sampler.stop();
@@ -253,7 +256,7 @@ void stopDoesNotWaitOutThePeriod()
     ProbeSensor sensor;
     Recorder rec;
     station::Sampler sampler(sensor, 10s);
-    sampler.onMeasurement([&](const Measurement& m) { rec(m); });
+    sampler.onMeasurement([&](std::size_t, const Measurement& m) { rec(m); });
     sampler.start();
     CHECK(rec.waitFor(1));                 // now sleeping until t = 10 s
     const auto t0 = Clock::now();
@@ -288,7 +291,7 @@ void periodDoesNotDriftWithReadTime()
     sensor.readTime = 30ms;
     Recorder rec;
     station::Sampler sampler(sensor, 100ms);
-    sampler.onMeasurement([&](const Measurement& m) { rec(m); });
+    sampler.onMeasurement([&](std::size_t, const Measurement& m) { rec(m); });
     sampler.start();
     CHECK(rec.waitFor(8, 10000ms));
     sampler.stop();
@@ -304,10 +307,10 @@ void callbackCanBeReplacedWhileRunning()
     Recorder a;
     Recorder b;
     station::Sampler sampler(sensor, 2ms);
-    sampler.onMeasurement([&](const Measurement& m) { a(m); });
+    sampler.onMeasurement([&](std::size_t, const Measurement& m) { a(m); });
     sampler.start();
     CHECK(a.waitFor(2));
-    sampler.onMeasurement([&](const Measurement& m) { b(m); });   // no data race (TSan)
+    sampler.onMeasurement([&](std::size_t, const Measurement& m) { b(m); });   // no data race (TSan)
     CHECK(b.waitFor(2));
     const size_t aFrozen = a.count();
     std::this_thread::sleep_for(20ms);
@@ -328,6 +331,114 @@ void samplerWithoutCallbackStillSamples()
     CHECK(sensor.reads >= 3);
 }
 
+// --- Week 6: a collection of sensors ------------------------------------------
+
+/// Records (sensorIndex, temperature, thread) per callback.
+struct IndexedRecorder {
+    std::mutex              mutex;
+    std::condition_variable cv;
+    std::vector<std::size_t> indices;
+    std::vector<float>      temperatures;
+    std::vector<std::thread::id> threads;
+
+    void operator()(std::size_t index, const Measurement& m)
+    {
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            indices.push_back(index);
+            temperatures.push_back(m.temperatureC);
+            threads.push_back(std::this_thread::get_id());
+        }
+        cv.notify_all();
+    }
+    bool waitFor(size_t n, std::chrono::milliseconds timeout = 5000ms)
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        return cv.wait_for(lock, timeout, [&] { return indices.size() >= n; });
+    }
+};
+
+void oneCallbackPerSensorPerCycleInOrder()
+{
+    // Two different classes behind the same interface: no casts, no type tests.
+    station::FakeSensor fake(20.0F);
+    ProbeSensor         probe;               // temperature = read number
+    (void)fake.init();
+    std::vector<bme280::EnvironmentSensor*> sensors{&fake, &probe};
+    IndexedRecorder rec;
+    station::Sampler sampler(sensors, 10ms);
+    CHECK(sampler.sensorCount() == 2);
+    sampler.onMeasurement([&](std::size_t i, const Measurement& m) { rec(i, m); });
+    sampler.start();
+    CHECK(rec.waitFor(6));                   // >= 3 cycles
+    sampler.stop();
+
+    std::lock_guard<std::mutex> lock(rec.mutex);
+    const size_t cycles = rec.indices.size() / 2;
+    for (size_t c = 0; c < cycles; ++c) {
+        CHECK(rec.indices[2 * c] == 0);      // vector order, every cycle
+        CHECK(rec.indices[2 * c + 1] == 1);
+        CHECK_NEAR(rec.temperatures[2 * c], 20.0 + 0.1 * static_cast<double>(c), 1e-4);   // FakeSensor ramp
+        CHECK_NEAR(rec.temperatures[2 * c + 1], static_cast<double>(c + 1), 1e-4);         // ProbeSensor count
+    }
+    for (std::thread::id t : rec.threads) {
+        CHECK(t != std::this_thread::get_id());
+        CHECK(t == rec.threads[0]);          // both sensors on the one sampler thread
+    }
+}
+
+void failingSensorDoesNotBlockTheOthers()
+{
+    ProbeSensor broken;
+    broken.failEvery = 1;                    // every read fails
+    station::FakeSensor fake;
+    (void)fake.init();
+    IndexedRecorder rec;
+    station::Sampler sampler({&broken, &fake}, 5ms);
+    sampler.onMeasurement([&](std::size_t i, const Measurement& m) { rec(i, m); });
+    sampler.start();
+    CHECK(rec.waitFor(3));
+    sampler.stop();
+    std::lock_guard<std::mutex> lock(rec.mutex);
+    for (std::size_t i : rec.indices) {
+        CHECK(i == 1);                       // only the healthy sensor reports
+    }
+    CHECK(broken.reads >= 3);                // the broken one is still tried every cycle
+}
+
+void stopMidCycleStartsNoFurtherRead()
+{
+    ProbeSensor slow;
+    slow.readTime = 300ms;
+    ProbeSensor next;
+    station::Sampler sampler({&slow, &next}, 1s);
+    sampler.start();
+    while (!slow.inRead) {
+        std::this_thread::yield();
+    }
+    const auto t0 = Clock::now();
+    sampler.stop();                          // during sensor 0's read
+    CHECK(ms(Clock::now() - t0) < 1000.0);   // within one period
+    CHECK(slow.reads == 1);
+    CHECK(next.reads == 0);                  // sensor 1 of that cycle is not started
+}
+
+void nullEntryIsSkipped()
+{
+    station::FakeSensor fake;
+    (void)fake.init();
+    IndexedRecorder rec;
+    station::Sampler sampler({nullptr, &fake}, 5ms);
+    sampler.onMeasurement([&](std::size_t i, const Measurement& m) { rec(i, m); });
+    sampler.start();
+    CHECK(rec.waitFor(2));
+    sampler.stop();
+    std::lock_guard<std::mutex> lock(rec.mutex);
+    for (std::size_t i : rec.indices) {
+        CHECK(i == 1);                       // indices keep their meaning
+    }
+}
+
 } // namespace
 
 int main()
@@ -345,5 +456,9 @@ int main()
     RUN(periodDoesNotDriftWithReadTime);
     RUN(callbackCanBeReplacedWhileRunning);
     RUN(samplerWithoutCallbackStillSamples);
+    RUN(oneCallbackPerSensorPerCycleInOrder);
+    RUN(failingSensorDoesNotBlockTheOthers);
+    RUN(stopMidCycleStartsNoFurtherRead);
+    RUN(nullEntryIsSkipped);
     return TEST_RESULT();
 }

@@ -198,7 +198,7 @@ void samplerKeepsSamplingWhileBrokerDown()
     std::atomic<int> attempts{0};
     std::atomic<int> failures{0};
     station::Sampler sampler(sensor, std::chrono::milliseconds(5));
-    sampler.onMeasurement([&](const bme280::Measurement& m) {
+    sampler.onMeasurement([&](std::size_t, const bme280::Measurement& m) {
         ++attempts;
         if (!publisher.publish(kTopic, station::toJson(m))) {
             ++failures;
@@ -245,7 +245,7 @@ void fullChainFakeSensorSamplerCallbackMqtt()
     station::FakeSensor sensor;
     CHECK(sensor.init() == bme280::Error::None);
     station::Sampler sampler(sensor, std::chrono::milliseconds(20));
-    sampler.onMeasurement([&](const bme280::Measurement& m) { publisher.publish(kTopic, station::toJson(m)); });
+    sampler.onMeasurement([&](std::size_t, const bme280::Measurement& m) { publisher.publish(kTopic, station::toJson(m)); });
     sampler.start();
     CHECK(sub.waitMessages(5));
     sampler.stop();
@@ -288,7 +288,7 @@ void brokerRestartWhileSampling()
     CHECK(waitUntil([&] { return publisher.isConnected(); }, 5000ms));
 
     station::Sampler sampler(sensor, std::chrono::milliseconds(20));
-    sampler.onMeasurement([&](const bme280::Measurement& m) {
+    sampler.onMeasurement([&](std::size_t, const bme280::Measurement& m) {
         (publisher.publish(kTopic, station::toJson(m)) ? ok : failed)++;
     });
     sampler.start();
