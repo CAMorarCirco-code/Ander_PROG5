@@ -21,6 +21,14 @@ public:
 
     /// Take one measurement, block until it is available.
     virtual Error readForced(Measurement& out) = 0;
+
+protected:
+    // Interfaces are used through references/pointers. Protected copy
+    // operations stop slicing ("*a = *b" through the base) while still
+    // letting implementations be copyable if they want to (same as Bus/Clock).
+    EnvironmentSensor()                            = default;
+    EnvironmentSensor(const EnvironmentSensor&)            = default;
+    EnvironmentSensor& operator=(const EnvironmentSensor&) = default;
 };
 
 } // namespace bme280
