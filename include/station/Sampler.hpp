@@ -63,7 +63,6 @@ public:
 
 private:
     void run();
-    bool keepRunning();
 
     const std::vector<bme280::EnvironmentSensor*> sensors_;
     const std::chrono::milliseconds               period_;

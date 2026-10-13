@@ -56,12 +56,6 @@ bool Sampler::isRunning() const
     return running_;
 }
 
-bool Sampler::keepRunning()
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    return running_;
-}
-
 void Sampler::run()
 {
     auto next = std::chrono::steady_clock::now();
@@ -77,7 +71,7 @@ void Sampler::run()
 
         // One cycle: every sensor once, in order, through the interface only.
         for (std::size_t i = 0; i < sensors_.size(); ++i) {
-            if (i > 0 && !keepRunning()) {
+            if (i > 0 && !isRunning()) {
                 return;             // stop() during a cycle: do not start the next read
             }
             bme280::Measurement m;
