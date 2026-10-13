@@ -1,0 +1,48 @@
+@startuml week7_packages_after
+' Week 7, AFTER the refactor: hal holds what every sensor shares.
+' bme280 and the second sensor depend on hal; neither depends on the other;
+' hal depends on nothing.
+title Packages AFTER: shared abstractions in hal
+skinparam shadowing false
+skinparam packageStyle folder
+
+package "hal  (include/hal)\nCMake: hal (INTERFACE)" as hal {
+  note as nh
+    Bus, Clock, EnvironmentSensor,
+    Error, errorName(), Measurement
+    **depends on nothing**
+  end note
+}
+package "bme280  (include/bme280, src, third_party)\nCMake: bme280_core, bme280_bosch" as bme280 {
+  note as nb
+    Bme280 (implements hal::EnvironmentSensor),
+    Config + enums, register map (Bosch)
+  end note
+}
+package "platform  (platform/)\nCMake: bme280_linux -> hal\nnamespace platform" as platform {
+  note as np
+    LinuxI2cBus, LinuxClock,
+    ArduinoI2cBus, ArduinoClock
+  end note
+}
+package "station  (include/station, station)\nCMake: bme280_station -> hal" as station {
+  note as ns
+    Sampler, Publisher(s), toJson,
+    FakeSensor (the second sensor,
+    implements hal::EnvironmentSensor)
+  end note
+}
+package "station_main  (examples/station)\ncomposition root" as main
+
+bme280   ..> hal : implements EnvironmentSensor,\nuses Bus, Clock
+platform ..> hal : implements Bus, Clock
+station  ..> hal : Sampler uses EnvironmentSensor*;\nFakeSensor implements it
+main ..> station
+main ..> bme280 : creates Bme280
+main ..> platform : creates LinuxI2cBus,\nLinuxClock
+note bottom of hal
+  DIP: both sensors depend on the same abstraction.
+  ISP: a distance sensor would not implement EnvironmentSensor.
+  SRP (package): hal changes only when the shared contract changes.
+end note
+@enduml

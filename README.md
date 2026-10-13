@@ -7,24 +7,28 @@ through Linux `i2c-dev` (Week 4).
 
 Week 5 added a weather station program that samples once per second on its own thread and
 publishes every measurement as JSON over MQTT, while the sensor class still knows nothing about
-MQTT, threads or JSON. This is the **Week 6** state: a technical design of the library and the
-station (class, package and two sequence diagrams) and one polymorphism step - the station
-samples a collection of sensors through `EnvironmentSensor*`.
+MQTT, threads or JSON. Week 6 added a technical design (class, package and two sequence diagrams)
+and one polymorphism step: the station samples a collection of sensors through
+`EnvironmentSensor*`. This is the **Week 7** state: host unit tests with doctest, a review and
+refactor ([`docs/refactor_report.md`](docs/refactor_report.md)), and the shared abstractions moved
+out of the BME280 package into their own package, `hal`.
 
 Earlier hand-ins are preserved in the tags `v0.3-arduino` (Week 3), `v0.4-pi` (Week 4) and
-`v0.5-mqtt` (Week 5).
+`v0.5-mqtt` (Week 5). Weeks 6 and 7 are on the branches `week6` and `week7`; their tags
+(`v0.6-design`, `v1.0`) are not created yet.
 
 ## Structure
 
 ```
-include/bme280/     Bus.hpp, Clock.hpp, EnvironmentSensor.hpp (interfaces),     <- core
-                    Types.hpp, Bme280.hpp
+include/hal/        Bus.hpp, Clock.hpp, EnvironmentSensor.hpp (interfaces),     <- hal (week 7)
+                    Types.hpp (Error, errorName, Measurement)
+include/bme280/     Types.hpp (Config), Bme280.hpp                              <- bme280 sensor
 include/station/    Sampler, Publisher, ConsolePublisher, MqttPublisher,       <- app (week 5)
                     FakeSensor, Json
 src/                Bme280.cpp (wraps the Bosch C driver)                    <- core
                     Bme280Lib.h, arduino_glue_*.{c,cpp}   <- Arduino IDE build glue (see below)
 third_party/bme280/ Bosch BME280 SensorAPI v3.5.1, vendored unmodified (BSD-3-Clause)
-platform/arduino/   ArduinoI2cBus (Wire), ArduinoClock (delay/delayMicroseconds)
+platform/arduino/   ArduinoI2cBus (Wire), ArduinoClock (delay/delayMicroseconds)   namespace platform
 platform/linux/     LinuxI2cBus (/dev/i2c-N, ioctl), LinuxClock (clock_nanosleep)
 station/            Sampler.cpp (thread), MqttPublisher.cpp (libmosquitto)  <- week 5
 examples/arduino/   ReadEverySecond, CustomConfig            (Arduino sketches)
@@ -34,7 +38,8 @@ tests/              host tests: core with mocks, Arduino bus with a fake Wire, L
                     fake ioctl, Linux platform
 cmake/              cross-compile toolchains for Raspberry Pi OS (aarch64, armhf)
 docs/               week4_class_diagram.*, week5_sequence_diagram.*,
-                    week6/ (class, package and two sequence diagrams; .puml + .svg + .png)
+                    week6/ (class, package and two sequence diagrams; .puml + .svg + .png),
+                    week7/ (package diagrams before/after the hal refactor), refactor_report.md
 CMakeLists.txt      core + Linux platform + station (week 5) + examples + tests
 library.properties  Arduino library metadata
 ```
@@ -42,7 +47,111 @@ library.properties  Arduino library metadata
 The core (`include/bme280/*`, `src/Bme280.cpp`, `third_party/`) includes no Arduino, Wire or
 Linux header, uses no `#ifdef` to tell platforms apart, and builds with any C++17 compiler.
 
+## Week 7: unit tests, review, refactor
+
+### Assignment 7: unit tests on the host (doctest)
+
+`tests/test_unit.cpp` uses doctest v2.4.11, which CMake fetches (`FetchContent`, as in the week-2
+starter); offline, pass `-DFETCHCONTENT_SOURCE_DIR_DOCTEST=/path/to/doctest-2.4.11`. Test doubles:
+* `tests/MockBus.hpp`: the starter's 256-byte register map plus write log. It decodes the Bosch
+  burst-write format, which the starter's version stored wrongly.
+* `tests/FakeClock.hpp`: only counts.
+* `tests/RecordingPublisher.hpp`: records what would have been published.
+
+| # | Required test | Test case |
+|---|---|---|
+| 1 | `init()` returns `WrongChipId` when 0xD0 is not 0x60 | `init() returns WrongChipId when register 0xD0 is not 0x60` |
+| 2 | `init()` returns `BusFailure` when the bus fails the first read | `init() returns BusFailure when the bus fails the first read` |
+| 3 | `read()` before `init()` returns `NotInitialised` | `read() before init() returns NotInitialised` |
+| 4 | `init()` succeeds with the chip ID and the calibration block | `init() succeeds with the correct chip ID and the calibration block pre-loaded` |
+| 5 | `readForced()` asks the `Clock` for at least the measurement time | `readForced() asks the Clock for at least the measurement time of the current config` (x16 config) |
+| 6 | Compensation matches the datasheet's worked example | `compensation matches the datasheet's worked example`: T = 25.08 degC and p = 100653.27 Pa (+/- 2 Pa on the 32-bit path). The datasheet prints no humidity example, so humidity is checked against the datasheet's double-precision formula. Verified to fail when the pressure or humidity unit conversion is broken. |
+| 7 | Why `MqttPublisher` is not unit-tested | It needs a running broker, so it gets an integration test instead (`test_mqtt_publisher` starts a real mosquitto). Unit-tested instead: `Sampler with FakeSensor publishes one message per sensor through a RecordingPublisher`. |
+
+The suites from earlier weeks (`core`, `station`, the platform tests, `mqtt_publisher`,
+`station_e2e`) still run; `dependencies` checks the package rules below.
+
+Test output on the development laptop (x86-64, GCC 13.3), `ctest --test-dir build`:
+
+```
+1/9 Test #1: core .............................   Passed    0.01 sec
+2/9 Test #2: arduino_platform_fake ............   Passed    0.00 sec
+3/9 Test #3: linux_i2c_bus_fake ...............   Passed    0.02 sec
+4/9 Test #4: linux_platform ...................   Passed    1.57 sec
+5/9 Test #5: station ..........................   Passed    1.77 sec
+6/9 Test #6: mqtt_publisher ...................   Passed    2.91 sec
+7/9 Test #7: station_e2e ......................   Passed   13.26 sec
+8/9 Test #8: unit .............................   Passed    0.01 sec
+9/9 Test #9: dependencies .....................   Passed    0.02 sec
+100% tests passed, 0 tests failed out of 9
+```
+
+`./build/tests/test_unit`:
+
+```
+[doctest] doctest version is "2.4.11"
+[doctest] run with "--help" for options
+===============================================================================
+[doctest] test cases:  8 |  8 passed | 0 failed | 0 skipped
+[doctest] assertions: 43 | 43 passed | 0 failed |
+[doctest] Status: SUCCESS!
+```
+
+### Assignment 8: review and refactor
+
+The full report, with each finding's `file:line`, principle and commit, is
+[`docs/refactor_report.md`](docs/refactor_report.md). In short:
+
+* **Mandatory: a `hal` package.** `Bus`, `Clock`, `EnvironmentSensor`, `Error` (+ `errorName`)
+  and `Measurement` moved from `bme280::` into `include/hal/` (namespace `hal`, CMake
+  `INTERFACE` target `hal`):
+  * `bme280`, `platform` and `station` depend on `hal`; `hal` depends on nothing.
+  * `bme280_linux` and `bme280_station` no longer link the BME280 code.
+  * The platform classes moved to namespace `platform`.
+  * `Config` and the register map stay BME280-only. `Measurement` is shared, a decision the
+    report explains.
+  * The station's `vector<hal::EnvironmentSensor*>` holds `bme280::Bme280` and
+    `station::FakeSensor`: two classes from two packages. Package diagrams before/after:
+    [`docs/week7/`](docs/week7/).
+* **Other findings:**
+  * DRY: one `errorName(Error)` instead of two copies in the examples.
+  * DRY: a duplicate `Sampler::keepRunning()` removed.
+  * Lifecycle/LSP: protected copy operations on `EnvironmentSensor` and `Publisher`.
+  * DRY in the tests: one shared `FakeClock`.
+  * One open ISP finding: `Bus::read()` is register-pointer based, so a command-based sensor
+    (SHT31/SHT45) would need a plain read.
+* **Lifecycle checklist and Embedded SOLID:** all rules hold. The three interfaces cost 68 B of
+  flash (vtables) and 12 B of RAM (vptrs) on the SAMD21, measured with `arm-none-eabi-nm`/`size`.
+* **Package rules as a test:** `tests/check_dependencies.sh` runs as ctest `dependencies` and
+  fails if `hal` includes anything outside `hal`/std, if the BME280 core includes station or
+  platform code, or if platform or station include a sensor package.
+
+### Week 7 verification status
+
+Run on the `week7` branch on an x86-64 Linux host (GCC 13.3, Clang 18.1.3, CMake 3.28,
+mosquitto 2.0.18); all builds with `-Wall -Wextra -Wpedantic -Werror`:
+
+| Check | Result |
+|---|---|
+| Clean GCC build (`cmake -S . -B build-clean -DBME280_WARNINGS_AS_ERRORS=ON`) | 0 warnings; 9/9 suites pass (`core`, `arduino_platform_fake`, `linux_i2c_bus_fake`, `linux_platform`, `station`, `mqtt_publisher`, `station_e2e`, `unit`, `dependencies`) |
+| Clang | 0 warnings; 9/9 |
+| Without the Linux layer (`-DBME280_BUILD_LINUX=OFF`) | 0 warnings; 6/6 |
+| ASan + UBSan / ThreadSanitizer | 9/9 each, no reports |
+| Valgrind (`test_core`, `test_unit`, `test_station`, `test_mqtt_publisher` with a real broker) | 0 errors, 0 leaks, 0 leaked fds |
+| cppcheck | 1 style suggestion (`std::any_of` for the sensor `init()` loop in `main`), kept on purpose |
+| aarch64 cross build, run under `qemu-aarch64` | 0 warnings; 8/8 (incl. `unit`; broker cases of `mqtt_publisher` skipped when cross-compiling; `station_e2e` is host-only) |
+| armhf cross build, run under `qemu-arm` | 0 warnings; 7/7 (no armhf libmosquitto here: MQTT parts not built) |
+| Arduino sketches (`nano_33_iot`, arm-none-eabi-gcc with the arduino-cli recipe, not arduino-cli itself) | both compile and link, 0 library/sketch warnings; `ReadEverySecond` 27292 B flash |
+
+**Not verified (pending hardware):** "the Pi still publishes" - the `v1.0` hand-in asks for it -
+has **not** been checked. No Raspberry Pi with a BME280 was available; the station has only run
+with `--fake` on the laptop. The Arduino example has been compiled, not run.
+
 ## Week 6: design on paper, polymorphism in code
+
+*This section describes the Week 6 state (`bda90c0`, intended tag `v0.6-design`). Week 7 moved
+`Bus`, `Clock`, `EnvironmentSensor`, `Error` and `Measurement` into the new `hal` package
+(`include/hal/`) and the platform classes into namespace `platform`; see "Week 7" above.*
 
 ### Diagrams
 
@@ -540,8 +649,8 @@ Bosch driver never transfers more than 26 bytes at once.
 #include <Wire.h>
 #include <Bme280Lib.h>
 
-static bme280::ArduinoI2cBus bus(Wire, static_cast<uint8_t>(bme280::I2cAddress::Low));
-static bme280::ArduinoClock  sensorClock;   // not "clock": would clash with ::clock()
+static platform::ArduinoI2cBus bus(Wire, static_cast<uint8_t>(bme280::I2cAddress::Low));
+static platform::ArduinoClock  sensorClock;   // not "clock": would clash with ::clock()
 static bme280::Bme280        sensor(bus, sensorClock);
 
 void setup() { Wire.begin(); sensor.init(); }
@@ -575,8 +684,8 @@ outlive it (locals are destroyed in reverse order); the sensor only borrows them
 #include "LinuxI2cBus.hpp"
 
 {
-    bme280::LinuxI2cBus bus(0x76);          // opens /dev/i2c-1, throws on failure
-    bme280::LinuxClock  clock;
+    platform::LinuxI2cBus bus(0x76);        // opens /dev/i2c-1, throws on failure
+    platform::LinuxClock  clock;
     bme280::Bme280      sensor(bus, clock);  // same core as on Arduino
 
     if (sensor.init() == bme280::Error::None) {
@@ -599,7 +708,9 @@ outlive it (locals are destroyed in reverse order); the sensor only borrows them
 | `bme280_station`   | `Sampler` (+ header-only `Publisher`, `ConsolePublisher`, `FakeSensor`, `toJson`) | `BME280_BUILD_STATION` (default on) |
 | `bme280_station_mqtt` | `MqttPublisher` - the only target linking libmosquitto | libmosquitto found |
 | `station_main`     | week-5 composition root                    | `BME280_BUILD_EXAMPLES` + Linux + libmosquitto |
+| `hal`              | `Bus`, `Clock`, `EnvironmentSensor`, `Error`, `Measurement` (header-only, week 7) | always |
 | `test_*`           | host tests (CTest)                         | `BME280_BUILD_TESTS`           |
+| `test_unit`        | week-7 doctest suite (doctest fetched by CMake) | `BME280_BUILD_TESTS` + station |
 
 The platform is picked in CMake (which subdirectory is added), never inside the core.
 `-DBME280_WARNINGS_AS_ERRORS=ON` adds `-Werror` to `-Wall -Wextra -Wpedantic`.

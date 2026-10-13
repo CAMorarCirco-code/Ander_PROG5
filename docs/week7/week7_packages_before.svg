@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="459px" preserveAspectRatio="none" style="width:848px;height:459px;" version="1.1" viewBox="0 0 848 459" width="848px" zoomAndPan="magnify"><defs/><g><text fill="#000000" font-family="sans-serif" font-size="18" lengthAdjust="spacingAndGlyphs" textLength="520" x="174.5" y="17.4375">Packages BEFORE: abstractions inside the BME280 package</text><!--MD5=[9d97ea85cb08226c17152fc6ebff363f]
+cluster bme280--><polygon fill="#FFFFFF" points="488.5,290.7793,710.5,290.7793,717.5,330.6582,777.5,330.6582,777.5,447.7793,488.5,447.7793,488.5,290.7793" style="stroke: #000000; stroke-width: 1.5;"/><line style="stroke: #000000; stroke-width: 1.5;" x1="488.5" x2="717.5" y1="330.6582" y2="330.6582"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="216" x="492.5" y="306.3418">bme280  (include/bme280, src)</text><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="150" x="525.5" y="323.2813">CMake: bme280_core</text><!--MD5=[d841c4c2f84d4e18d352f800547f43fc]
+cluster platform--><polygon fill="#FFFFFF" points="555.5,53.7793,718.5,53.7793,725.5,93.6582,826.5,93.6582,826.5,178.7793,555.5,178.7793,555.5,53.7793" style="stroke: #000000; stroke-width: 1.5;"/><line style="stroke: #000000; stroke-width: 1.5;" x1="555.5" x2="725.5" y1="93.6582" y2="93.6582"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="141" x="567.5" y="69.3418">platform  (platform/)</text><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="157" x="559.5" y="86.2813">namespace bme280 (!)</text><!--MD5=[51400afdd6f4474284736a3aa6c08a72]
+cluster station--><polygon fill="#FFFFFF" points="214.5,53.7793,505.5,53.7793,512.5,93.6582,515.5,93.6582,515.5,178.7793,214.5,178.7793,214.5,53.7793" style="stroke: #000000; stroke-width: 1.5;"/><line style="stroke: #000000; stroke-width: 1.5;" x1="214.5" x2="512.5" y1="93.6582" y2="93.6582"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="261" x="230.5" y="69.3418">app / station  (include/station, station)</text><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="285" x="218.5" y="86.2813">CMake: bme280_station -&gt; bme280_core</text><path d="M531.5,350.7793 L531.5,423.6973 L753.5,423.6973 L753.5,360.7793 L743.5,350.7793 L531.5,350.7793 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M743.5,350.7793 L743.5,360.7793 L753.5,360.7793 L743.5,350.7793 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="188" x="537.5" y="368.373">Bme280, Config, register map</text><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="186" x="537.5" y="384.1025">plus the shared abstractions:</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="201" x="537.5" y="399.832">Bus, Clock, EnvironmentSensor,</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="125" x="537.5" y="415.5615">Error, Measurement</text><path d="M598.5,113.7793 L598.5,155.2383 L802.5,155.2383 L802.5,123.7793 L792.5,113.7793 L598.5,113.7793 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M792.5,113.7793 L792.5,123.7793 L802.5,123.7793 L792.5,113.7793 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="155" x="604.5" y="131.373">LinuxI2cBus, LinuxClock,</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="183" x="604.5" y="147.1025">ArduinoI2cBus, ArduinoClock</text><path d="M261.5,113.7793 L261.5,155.2383 L491.5,155.2383 L491.5,123.7793 L481.5,113.7793 L261.5,113.7793 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M481.5,113.7793 L481.5,123.7793 L491.5,123.7793 L481.5,113.7793 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="187" x="267.5" y="131.373">Sampler, Publisher(s), toJson,</text><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="209" x="267.5" y="147.1025">FakeSensor = the second sensor</text><path d="M6,358.7793 L6,415.9678 L447,415.9678 L447,368.7793 L437,358.7793 L6,358.7793 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M437,358.7793 L437,368.7793 L447,368.7793 L437,358.7793 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="420" x="12" y="376.373">Sensor B (FakeSensor) depends on sensor A's package (bme280).</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="324" x="12" y="392.1025">A second real sensor (e.g. sht45::Sht45) would too:</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="266" x="12" y="407.832">the abstractions are in the wrong package.</text><!--MD5=[452d97d289a6bf966ce54b7150573f6a]
+link platform to bme280--><path d="M555.4956,155.1957 C555.3776,155.4967 555.2586,155.8005 555.1386,156.1072 C554.1789,158.5603 553.1568,161.1928 552.0834,163.9841 C549.9366,169.5667 547.5844,175.7846 545.115,182.473 C535.2375,209.2268 523.485,243.5093 515.5,274.7793 C514.7344,277.7755 513.9911,280.8252 513.2702,283.9102 C512.9098,285.4527 512.5549,287.0041 512.2058,288.5622 C512.1185,288.9517 512.0315,289.3416 511.9449,289.7319 C511.9016,289.927 511.8584,290.1223 511.8153,290.3176 " fill="none" id="platform-&gt;bme280" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="511.8153,290.3176,517.6613,282.3914,512.8931,285.4352,509.8494,280.667,511.8153,290.3176" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="162" x="537.5" y="231.873">implements bme280::Bus,</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="94" x="571.5" y="247.6025">bme280::Clock</text><!--MD5=[734aad41d1068b2dcbd80cf72e9d0d0c]
+link station to bme280--><path d="M237.5338,178.9532 C237.5743,179.0538 237.6149,179.1543 237.6557,179.2548 C237.7372,179.4558 237.8192,179.6566 237.9018,179.8573 C238.067,180.2586 238.2344,180.6593 238.404,181.059 C239.0822,182.658 239.7957,184.2429 240.546,185.8031 C242.0464,188.9234 243.6938,191.9443 245.5,194.7793 C248.67,199.7493 318.07,264.4793 323.5,266.7793 C337.95,272.9093 452.24,264.9893 464.5,274.7793 C474.4125,282.6968 481.3844,293.4699 486.2627,305.2137 C486.8724,306.6816 487.4495,308.1648 487.9955,309.6594 C488.132,310.033 488.2666,310.4074 488.3992,310.7825 " fill="none" id="station-&gt;bme280" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="#A80036" points="488.3992,310.7825,489.1692,300.9637,486.732,306.0686,481.6271,303.6314,488.3992,310.7825" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="149" x="342.5" y="216.373">FakeSensor implements</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="185" x="324.5" y="232.1025">bme280::EnvironmentSensor;</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="127" x="353.5" y="247.832">Sampler, toJson use</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="145" x="344.5" y="263.5615">bme280::Measurement</text><!--MD5=[aec7f3951f656ab60211e5d4779236e4]
+link station to GMN10--><path d="M226.5,178.9179 C226.5,180.1179 226.5,181.3356 226.5,182.5701 C226.5,185.0391 226.5,187.5753 226.5,190.1713 C226.5,200.5551 226.5,211.8949 226.5,223.7168 C226.5,271.0043 226.5,326.0043 226.5,358.3793 " fill="none" id="station-GMN10" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><!--MD5=[fdeb83730035a2fde2b3499dcccde613]
+@startuml week7_packages_before
+title Packages BEFORE: abstractions inside the BME280 package
+skinparam shadowing false
+skinparam packageStyle folder
+
+package "bme280  (include/bme280, src)\nCMake: bme280_core" as bme280 {
+  note as nb
+    Bme280, Config, register map
+    **plus the shared abstractions:**
+    Bus, Clock, EnvironmentSensor,
+    Error, Measurement
+  end note
+}
+package "platform  (platform/)\nnamespace bme280 (!)" as platform {
+  note as np
+    LinuxI2cBus, LinuxClock,
+    ArduinoI2cBus, ArduinoClock
+  end note
+}
+package "app / station  (include/station, station)\nCMake: bme280_station -> bme280_core" as station {
+  note as ns
+    Sampler, Publisher(s), toJson,
+    **FakeSensor = the second sensor**
+  end note
+}
+
+platform ..> bme280 : implements bme280::Bus,\nbme280::Clock
+station  ..> bme280 : FakeSensor implements\nbme280::EnvironmentSensor;\nSampler, toJson use\nbme280::Measurement
+note bottom of station
+  Sensor B (FakeSensor) depends on sensor A's package (bme280).
+  A second real sensor (e.g. sht45::Sht45) would too:
+  the abstractions are in the wrong package.
+end note
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 10:22:07 UTC 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 21.0.12.1+1-1-24.04.4-Ubuntu
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

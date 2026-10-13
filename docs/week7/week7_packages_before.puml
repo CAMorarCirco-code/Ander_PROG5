@@ -1,0 +1,37 @@
+@startuml week7_packages_before
+' Week 7, BEFORE the refactor (= the week-6 code, commit bda90c0):
+' the shared abstractions live in the BME280 package, so the second sensor,
+' the station and every platform depend on bme280.
+title Packages BEFORE: abstractions inside the BME280 package
+skinparam shadowing false
+skinparam packageStyle folder
+
+package "bme280  (include/bme280, src)\nCMake: bme280_core" as bme280 {
+  note as nb
+    Bme280, Config, register map
+    **plus the shared abstractions:**
+    Bus, Clock, EnvironmentSensor,
+    Error, Measurement
+  end note
+}
+package "platform  (platform/)\nnamespace bme280 (!)" as platform {
+  note as np
+    LinuxI2cBus, LinuxClock,
+    ArduinoI2cBus, ArduinoClock
+  end note
+}
+package "app / station  (include/station, station)\nCMake: bme280_station -> bme280_core" as station {
+  note as ns
+    Sampler, Publisher(s), toJson,
+    **FakeSensor = the second sensor**
+  end note
+}
+
+platform ..> bme280 : implements bme280::Bus,\nbme280::Clock
+station  ..> bme280 : FakeSensor implements\nbme280::EnvironmentSensor;\nSampler, toJson use\nbme280::Measurement
+note bottom of station
+  Sensor B (FakeSensor) depends on sensor A's package (bme280).
+  A second real sensor (e.g. sht45::Sht45) would too:
+  the abstractions are in the wrong package.
+end note
+@enduml
