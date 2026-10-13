@@ -1,0 +1,139 @@
+@startuml week6_class_diagram
+' Week 6: class diagram of library + station, matching the code at v0.6-design.
+' Realization ..|>, dependency ..>, aggregation o--, composition *--.
+title Ander_PROG5 - class diagram (week 6)
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+hide empty members
+
+package "core  (include/bme280, src/, third_party/)" as core {
+  interface Bus <<interface>> {
+    + read(reg, data, len) : bool
+    + write(reg, data, len) : bool
+  }
+  interface Clock <<interface>> {
+    + delayUs(us : uint32_t)
+  }
+  interface EnvironmentSensor <<interface>> {
+    + init() : Error
+    + readForced(out : Measurement&) : Error
+  }
+  class Bme280 {
+    - bus_ : Bus&
+    - clock_ : Clock&
+    - dev_ : bme280_dev
+    - settings_ : bme280_settings
+    + Bme280(bus : Bus&, clock : Clock&)
+    + init() : Error
+    + init(config : const Config&) : Error
+    + readForced(out : Measurement&) : Error
+    + read(out : Measurement&) : Error
+    + measurementTimeUs() const : uint32_t
+    - {static} readCb / writeCb / delayCb
+  }
+  class "bme280_dev\n(Bosch C struct)" as dev <<struct>>
+}
+
+package "platform  (platform/)" as platform {
+  package "linux" {
+    class LinuxI2cBus <<final>> {
+      - fd_ : int
+      + LinuxI2cBus(address, device = "/dev/i2c-1")
+      + ~LinuxI2cBus()
+    }
+    class LinuxClock <<final>>
+  }
+  package "arduino" {
+    class ArduinoI2cBus <<final>> {
+      - wire_ : TwoWire&
+    }
+    class ArduinoClock <<final>>
+    class TwoWire <<Arduino core>>
+  }
+}
+
+package "app  (include/station/, station/, examples/)" as app {
+  interface Publisher <<interface>> {
+    + publish(topic, payload) : bool
+  }
+  class Sampler {
+    - sensors_ : vector<EnvironmentSensor*>
+    - thread_ : std::thread
+    - callback_ : Callback
+    + Sampler(sensors, period)
+    + onMeasurement(cb : Callback)
+    + start()
+    + stop()
+  }
+  class "std::thread" as thread
+  class "Callback\n(std::function: void(size_t index,\nconst Measurement&))" as Callback
+  class FakeSensor <<final>>
+  class ConsolePublisher <<final>>
+  class MqttPublisher <<final>> {
+    - client_ : mosquitto*
+    + MqttPublisher(host, port)
+    + ~MqttPublisher()
+  }
+  class "mosquitto\n(libmosquitto client)" as mosq <<struct>>
+  class "station_main" as main <<composition root>>
+}
+
+package "tests  (tests/)" as tests {
+  class MockBus
+  class FakeClock
+}
+
+' --- realizations ("implements") ---------------------------------------------
+Bme280        ..|> EnvironmentSensor
+FakeSensor    ..|> EnvironmentSensor
+LinuxI2cBus   ..|> Bus
+ArduinoI2cBus ..|> Bus
+MockBus       ..|> Bus
+LinuxClock    ..|> Clock
+ArduinoClock  ..|> Clock
+FakeClock     ..|> Clock
+MqttPublisher    ..|> Publisher
+ConsolePublisher ..|> Publisher
+
+' --- has-a, with the reason for each diamond -----------------------------------
+Bme280  o--> "1" Bus   : bus_
+Bme280  o--> "1" Clock : clock_
+note on link
+  **aggregation**: bus and clock are created
+  outside (sketch / main), passed in by
+  reference and live longer than the sensor
+end note
+Bme280  *--> "1" dev : dev_
+note on link
+  **composition**: a member by value; created
+  and destroyed with the Bme280
+end note
+Sampler *--> "1" thread : thread_
+note on link
+  **composition**: stop() / ~Sampler join it;
+  the thread cannot outlive the sampler
+end note
+Sampler o--> "*" EnvironmentSensor : sensors_
+note on link
+  **aggregation**: borrowed pointers; the
+  sensors are owned by main and outlive it
+end note
+Sampler *--> "0..1" Callback : callback_
+MqttPublisher *--> "1" mosq : client_
+note on link
+  **composition**: mosquitto_new() in the
+  constructor, mosquitto_destroy() in the destructor
+end note
+ArduinoI2cBus o--> "1" TwoWire : wire_
+
+' --- uses ---------------------------------------------------------------------
+Callback ..> Publisher : publish(topic, toJson(m))
+main ..> Sampler : creates
+main ..> Bme280 : creates
+main ..> FakeSensor : creates
+main ..> LinuxI2cBus : creates
+main ..> LinuxClock : creates
+main ..> MqttPublisher : creates
+main ..> ConsolePublisher : creates
+@enduml

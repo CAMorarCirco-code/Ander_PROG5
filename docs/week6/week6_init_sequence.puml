@@ -1,0 +1,71 @@
+@startuml week6_init_sequence
+' Week 6: Bme280::init() with the default Config, including the hop into the
+' Bosch C code and the callbacks back into Bus/Clock. The bus traffic is the
+' one recorded from the real code (src/Bme280.cpp + Bosch v3.5.1).
+title Bme280::init() - default Config (weather monitoring)
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+hide footbox
+
+participant "main / sketch" as caller
+box "core" #EAF2FF
+  participant "sensor:\nBme280" as bme
+  participant "Bosch SensorAPI\n(C, third_party)" as bosch
+  participant "Bme280::readCb /\nwriteCb / delayCb\n(static)" as cb
+end box
+participant "<<interface>>\n:Bus" as bus
+participant "<<interface>>\n:Clock" as clk
+
+caller -> bme : init()
+activate bme
+bme -> bme : init(Config{})
+bme -> bosch : bme280_init(&dev_)
+activate bosch
+== chip ID ==
+bosch -> cb : dev->read(0xD0, 1, intf_ptr = this)
+cb -> bus : read(0xD0, data, 1)
+bus --> cb : true, 0x60
+cb --> bosch : BME280_OK
+== soft reset ==
+bosch -> cb : dev->write(0xE0, [0xB6])
+cb -> bus : write(0xE0, data, 1)
+bus --> cb : true
+bosch -> cb : dev->delay_us(2000)
+cb -> clk : delayUs(2000)
+bosch -> cb : dev->read(0xF3, 1)
+cb -> bus : read(0xF3, data, 1)
+note right : status: NVM copy done
+== calibration ==
+bosch -> cb : dev->read(0x88, 26)
+cb -> bus : read(0x88, data, 26)
+bosch -> cb : dev->read(0xE1, 7)
+cb -> bus : read(0xE1, data, 7)
+bosch --> bme : BME280_OK
+deactivate bosch
+== config write: configure(config) ==
+bme -> bosch : bme280_set_sensor_settings(ALL, &settings_, &dev_)
+activate bosch
+bosch -> cb : read(0xF4, 1)
+cb -> bus : read(0xF4, data, 1)
+note right : power mode: sleep after reset
+bosch -> cb : write(0xF2 ctrl_hum = 0x01)
+cb -> bus : write(0xF2, data, 1)
+bosch -> cb : read(0xF4) / write(0xF4 = 0x00)
+cb -> bus : read(0xF4) ; write(0xF4, data, 1)
+note right : ctrl_hum only takes effect\nafter a ctrl_meas write
+bosch -> cb : read(0xF4) / write(0xF4 = 0x24)
+cb -> bus : read(0xF4) ; write(0xF4, data, 1)
+note right : osrs_t = x1, osrs_p = x1
+bosch -> cb : read(0xF5) / write(0xF5 = 0xA0)
+cb -> bus : read(0xF5) ; write(0xF5, data, 1)
+note right : standby 1000 ms, filter off
+bosch --> bme : BME280_OK
+deactivate bosch
+bme --> caller : Error::None
+deactivate bme
+note over bus
+  Bus is an interface: LinuxI2cBus on the Pi,
+  ArduinoI2cBus on the SAMD21, MockBus in tests.
+  No Wire / ioctl lifeline in core.
+end note
+@enduml

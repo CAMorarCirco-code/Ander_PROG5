@@ -1,0 +1,61 @@
+@startuml week6_package_diagram
+' Week 6: package diagram. Rule: core has no outgoing arrows.
+title Ander_PROG5 - packages, folders and CMake targets (week 6)
+skinparam shadowing false
+skinparam packageStyle folder
+
+package "core" as core {
+  note as ncore
+    **folders**: include/bme280/, src/Bme280.cpp, third_party/bme280/
+    **CMake**: bme280_core, bme280_bosch
+    Bus, Clock, EnvironmentSensor (interfaces),
+    Bme280, Types (Measurement, Error, Config)
+  end note
+}
+
+package "platform" as platform {
+  package "linux" as plinux {
+    note as nlinux
+      **folder**: platform/linux/
+      **CMake**: bme280_linux
+      LinuxI2cBus, LinuxClock
+    end note
+  }
+  package "arduino" as parduino {
+    note as narduino
+      **folder**: platform/arduino/
+      **build**: Arduino IDE / library.properties
+      (glue in src/, see README)
+      ArduinoI2cBus, ArduinoClock
+    end note
+  }
+}
+
+package "app" as app {
+  note as napp
+    **folders**: include/station/, station/,
+    examples/station/, examples/rpi/
+    **CMake**: bme280_station, bme280_station_mqtt,
+    station_main, bme280_rpi_smoke
+    Sampler, Publisher, ConsolePublisher,
+    MqttPublisher, FakeSensor, toJson, main
+  end note
+}
+
+package "tests" as tests {
+  note as ntests
+    **folder**: tests/
+    **CMake**: test_core, test_station,
+    test_mqtt_publisher, test_linux_*,
+    test_arduino_platform_fake, station_e2e
+  end note
+}
+
+plinux    ..> core : implements Bus, Clock
+parduino  ..> core : implements Bus, Clock
+app       ..> core : uses EnvironmentSensor,\nMeasurement (Bme280 only in main)
+app       ..> plinux : main creates\nLinuxI2cBus, LinuxClock
+tests     ..> core
+tests     ..> platform
+tests     ..> app
+@enduml

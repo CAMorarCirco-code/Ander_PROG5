@@ -1,0 +1,74 @@
+@startuml week6_sample_publish_sequence
+' Week 6: one sample-and-publish cycle with two sensors (refines week 5).
+' Matches station/Sampler.cpp, src/Bme280.cpp, examples/station/station_main.cpp.
+title station_main - one cycle, two sensors (period 1 s)
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+hide footbox
+
+participant "main()\n<i>main thread</i>" as main
+box "used by the sampler thread during a cycle" #EAF2FF
+  participant ":Sampler" as sampler
+  participant "sensors[0]:\nBme280" as bme
+  participant "<<interface>>\n:Bus" as bus
+  participant "<<interface>>\n:Clock" as clk
+  participant "sensors[1]:\nFakeSensor" as fake
+  participant "callback\n(lambda from main)" as cb
+  participant "publisher:\nMqttPublisher" as mqtt
+end box
+box "mosquitto network thread" #F3F3F3
+  participant "libmosquitto" as lib
+end box
+participant "MQTT broker" as broker
+
+activate main
+main -> bme : init()
+main -> fake : init()
+main -> sampler : start()
+main -> main : sigwait(SIGINT, SIGTERM)
+note right of main : main is blocked for the whole run;\nit is not on the sampler thread
+deactivate main
+
+activate sampler #B7D3FF
+note over sampler, fake
+  for each sensor in vector order the Sampler makes the **same** call,
+  sensors[i]->readForced(m), through EnvironmentSensor*; virtual dispatch
+  decides what runs. No dynamic_cast, no type test.
+end note
+group i = 0
+  sampler -> bme : readForced(m)
+  activate bme
+  bme -> bus : read(0xF4) ; read(0xF4) ; write(0xF4 = forced)
+  bme -> clk : delayUs(measurementTimeUs())
+  bme -> bus : read(0xF7, data, 8)
+  bme --> sampler : Error::None, m
+  deactivate bme
+  sampler -> cb : callback(0, m)
+  activate cb
+  cb -> cb : toJson(m)
+  cb -> mqtt : publish(topics[0], json)
+  activate mqtt
+  note right of mqtt : topics[0] = han/ese/ander/bme280/state
+  mqtt -> lib : mosquitto_publish (queue only)
+  mqtt --> cb : true / false if broker down
+  deactivate mqtt
+  deactivate cb
+end
+group i = 1
+  sampler -> fake : readForced(m)
+  fake --> sampler : Error::None, ramp value
+  sampler -> cb : callback(1, m)
+  activate cb
+  cb -> mqtt : publish(topics[1], toJson(m))
+  activate mqtt
+  note right of mqtt : topics[1] = han/ese/ander/fake/state
+  mqtt -> lib : mosquitto_publish (queue only)
+  mqtt --> cb : true / false
+  deactivate mqtt
+  deactivate cb
+end
+lib ->> broker : 2 x PUBLISH (async, mosquitto's thread)
+sampler -> sampler : wait_until(next deadline) or stop()
+deactivate sampler
+@enduml

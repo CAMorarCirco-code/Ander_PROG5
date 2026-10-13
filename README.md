@@ -5,18 +5,22 @@ is wrapped in a class that talks to two abstractions, `Bus` and `Clock`, so the 
 not depend on any particular board. The same core runs on Arduino (Week 3) and on a Raspberry Pi
 through Linux `i2c-dev` (Week 4).
 
-This is the **Week 5** state: a weather station program samples the sensor once per second on
-its own thread and publishes every measurement as JSON over MQTT, while the sensor class still
-knows nothing about MQTT, threads or JSON.
+Week 5 added a weather station program that samples once per second on its own thread and
+publishes every measurement as JSON over MQTT, while the sensor class still knows nothing about
+MQTT, threads or JSON. This is the **Week 6** state: a technical design of the library and the
+station (class, package and two sequence diagrams) and one polymorphism step - the station
+samples a collection of sensors through `EnvironmentSensor*`.
 
-Earlier hand-ins are preserved in the tags `v0.3-arduino` (Week 3) and `v0.4-pi` (Week 4).
+Earlier hand-ins are preserved in the tags `v0.3-arduino` (Week 3), `v0.4-pi` (Week 4) and
+`v0.5-mqtt` (Week 5).
 
 ## Structure
 
 ```
-include/bme280/     Bus.hpp, Clock.hpp (interfaces), Types.hpp, Bme280.hpp   <- core
-include/station/    EnvironmentSensor.hpp (interface, implemented by Bme280)  <- week 5
-                    Sampler, Publisher, ConsolePublisher, MqttPublisher, FakeSensor, Json
+include/bme280/     Bus.hpp, Clock.hpp, EnvironmentSensor.hpp (interfaces),     <- core
+                    Types.hpp, Bme280.hpp
+include/station/    Sampler, Publisher, ConsolePublisher, MqttPublisher,       <- app (week 5)
+                    FakeSensor, Json
 src/                Bme280.cpp (wraps the Bosch C driver)                    <- core
                     Bme280Lib.h, arduino_glue_*.{c,cpp}   <- Arduino IDE build glue (see below)
 third_party/bme280/ Bosch BME280 SensorAPI v3.5.1, vendored unmodified (BSD-3-Clause)
@@ -29,7 +33,8 @@ examples/station/   station_main.cpp -> station_main         (week 5 composition
 tests/              host tests: core with mocks, Arduino bus with a fake Wire, Linux bus with a
                     fake ioctl, Linux platform
 cmake/              cross-compile toolchains for Raspberry Pi OS (aarch64, armhf)
-docs/               week4_class_diagram.{puml,svg,png}, week5_sequence_diagram.{puml,svg,png}
+docs/               week4_class_diagram.*, week5_sequence_diagram.*,
+                    week6/ (class, package and two sequence diagrams; .puml + .svg + .png)
 CMakeLists.txt      core + Linux platform + station (week 5) + examples + tests
 library.properties  Arduino library metadata
 ```
@@ -37,7 +42,154 @@ library.properties  Arduino library metadata
 The core (`include/bme280/*`, `src/Bme280.cpp`, `third_party/`) includes no Arduino, Wire or
 Linux header, uses no `#ifdef` to tell platforms apart, and builds with any C++17 compiler.
 
+## Week 6: design on paper, polymorphism in code
+
+### Diagrams
+
+All four are PlantUML source **and** rendered image in [`docs/week6/`](docs/week6/), and match the
+code on this branch.
+
+| Diagram | Source | Image |
+|---|---|---|
+| Class diagram (whole library + station, with `MockBus`/`FakeClock` from the tests) | [puml](docs/week6/week6_class_diagram.puml) | [png](docs/week6/week6_class_diagram.png) / [svg](docs/week6/week6_class_diagram.svg) |
+| Package diagram (packages, folders, CMake targets) | [puml](docs/week6/week6_package_diagram.puml) | [png](docs/week6/week6_package_diagram.png) / [svg](docs/week6/week6_package_diagram.svg) |
+| Sequence: `Bme280::init()` incl. the hop into Bosch C and the callbacks into `Bus`/`Clock` | [puml](docs/week6/week6_init_sequence.puml) | [png](docs/week6/week6_init_sequence.png) / [svg](docs/week6/week6_init_sequence.svg) |
+| Sequence: one sample-and-publish cycle with two sensors (refines Week 5) | [puml](docs/week6/week6_sample_publish_sequence.puml) | [png](docs/week6/week6_sample_publish_sequence.png) / [svg](docs/week6/week6_sample_publish_sequence.svg) |
+
+![Class diagram](docs/week6/week6_class_diagram.png)
+
+`<<interface>>`: `Bus`, `Clock`, `EnvironmentSensor`, `Publisher`. Realizations are dashed with a
+hollow triangle (`..|>`), dependencies dashed (`..>`). The diamonds, and why each one:
+
+| Has-a | Diamond | Why |
+|---|---|---|
+| `Sampler` -> `std::thread` | composition | `stop()` and `~Sampler()` join it; the thread cannot outlive the sampler (never detached). |
+| `Bme280` -> `Bus`, `Clock` | aggregation | Created outside (sketch / `main`), passed in by reference, live longer than the sensor. |
+| `Bme280` -> `bme280_dev` (Bosch struct) | composition | A member by value: created and destroyed with the `Bme280`. |
+| `Sampler` -> `EnvironmentSensor` (0..*) | aggregation | Borrowed pointers; `main` owns the sensors and they outlive the sampler. |
+| `MqttPublisher` -> `mosquitto` client | composition | `mosquitto_new()` in the constructor, `mosquitto_destroy()` in the destructor. |
+| `ArduinoI2cBus` -> `TwoWire` | aggregation | `Wire` belongs to the Arduino core and is started by the sketch. |
+
+The `init()` sequence was checked against the real bus traffic: running `Bme280::init()` on a
+logging `Bus` records exactly `read(0xD0,1)`, `write(0xE0,[B6])`, `delayUs(2000)`, `read(0xF3,1)`,
+`read(0x88,26)`, `read(0xE1,7)`, then the config writes to `0xF2`, `0xF4` (twice, each after a
+read) and `0xF5`. No `Wire` or `ioctl` lifeline appears inside `core`.
+
+### Packages = folders = CMake targets
+
+![Package diagram](docs/week6/week6_package_diagram.png)
+
+| Package | Folders | CMake targets | Depends on |
+|---|---|---|---|
+| `core` | `include/bme280/`, `src/Bme280.cpp`, `third_party/bme280/` | `bme280_core`, `bme280_bosch` | **nothing** |
+| `platform` / `linux` | `platform/linux/` | `bme280_linux` | `core` (implements `Bus`, `Clock`) |
+| `platform` / `arduino` | `platform/arduino/` | Arduino IDE (`library.properties`) | `core` (implements `Bus`, `Clock`) |
+| `app` | `include/station/`, `station/`, `examples/station/`, `examples/rpi/` | `bme280_station`, `bme280_station_mqtt`, `station_main`, `bme280_rpi_smoke` | `core`; `main` only also on `platform/linux` |
+| `tests` | `tests/` | `test_*`, `station_e2e` | everything |
+
+`core` has no outgoing arrow. Checked with `grep` (no `station/`, `platform/`, Arduino or Linux
+include in `include/bme280/` or `src/Bme280.cpp`) and `nm -u libbme280_core.a` (only Bosch
+symbols and the C++ runtime). To get there, `EnvironmentSensor` moved this week from
+`include/station/` into `include/bme280/` (namespace `bme280`): in Week 5 `Bme280.hpp` included
+it from the app folder, an arrow from `core` into `app`.
+
+One exception in the folder partition: `src/Bme280Lib.h` and `src/arduino_glue_*.{c,cpp}` include
+`platform/arduino/` files. They are Arduino IDE packaging, not part of `core` - the IDE only
+compiles a library's `src/` folder, so the glue has to live there. They compile only when
+`ARDUINO` is defined, and no CMake target uses them.
+
+### Polymorphism in code
+
+`station_main` holds a `std::vector<bme280::EnvironmentSensor*>`: the `Bme280` (or a
+`FakeSensor` with `--fake`) and a second `FakeSensor(30.0)`. `Sampler` iterates over the vector
+and calls `readForced()` through the interface only - no `dynamic_cast`, no
+`if (sensor is Bme280)`. The callback receives the sensor's index, and `main` maps it to a topic,
+so the publisher gets one message per sensor per cycle:
+
+```cpp
+std::vector<bme280::EnvironmentSensor*> sensors{&primary, &second};
+const std::vector<std::string> topics{"han/ese/ander/bme280/state", "han/ese/ander/fake/state"};
+station::Sampler sampler(sensors, std::chrono::seconds(1));
+sampler.onMeasurement([&](std::size_t i, const bme280::Measurement& m) {
+    publisher.publish(topics[i], station::toJson(m));
+});
+```
+
+`station_main --fake --console` on the development laptop (no hardware):
+
+```
+han/ese/ander/bme280/state {"t":20.00,"p":101325,"h":45.2}
+han/ese/ander/fake/state {"t":30.00,"p":101325,"h":45.2}
+han/ese/ander/bme280/state {"t":20.10,"p":101325,"h":45.2}
+han/ese/ander/fake/state {"t":30.10,"p":101325,"h":45.2}
+han/ese/ander/bme280/state {"t":20.20,"p":101325,"h":45.2}
+han/ese/ander/fake/state {"t":30.20,"p":101325,"h":45.2}
+```
+
+The Week 5 topic `han/ese/ander/bme280/state` and the JSON format are unchanged. The Arduino
+sketches still use a single sensor (the assignment makes `std::array` there optional).
+
+### Coupling and cohesion
+
+| Class | Its single reason to change |
+|---|---|
+| `Bus` | What a register-level byte transport must offer the sensor |
+| `Clock` | How the sensor waits |
+| `EnvironmentSensor` | What the station needs from any environmental sensor |
+| `Bme280` | BME280 behaviour / Bosch driver usage (config, modes, compensation units) |
+| `LinuxI2cBus` | The Linux `i2c-dev` interface |
+| `LinuxClock` | The Linux sleeping primitive |
+| `ArduinoI2cBus` | The Arduino `Wire` API |
+| `ArduinoClock` | Arduino `delay`/`delayMicroseconds` |
+| `Sampler` | Sampling policy: thread, period, order, start/stop |
+| `Publisher` | What "send a payload to a topic" means to the station |
+| `MqttPublisher` | libmosquitto: connection, reconnect, publish |
+| `ConsolePublisher` | Console output format |
+| `FakeSensor` | The simulated values |
+| `toJson()` | The payload format |
+| `station_main` | Which concrete parts the station is built from (composition root) |
+| `MockBus` / `FakeClock` (tests) | What the core tests need to observe |
+
+| Package arrow | Towards an abstraction? |
+|---|---|
+| `platform` -> `core` | Yes: `LinuxI2cBus`/`ArduinoI2cBus` implement `Bus`, the clocks implement `Clock`. |
+| `app` -> `core` | Yes for `Sampler` (only `EnvironmentSensor`, `Measurement`, `Error`). `main` also names `Bme280` - it is the composition root. |
+| `app` -> `platform` | No, on purpose: only `main` names `LinuxI2cBus`/`LinuxClock`, to build them. Nothing else in `app` does. |
+| `tests` -> everything | Tests use concrete classes to check them; the doubles implement the interfaces. |
+
+### Week 6 tests and verification
+
+* `test_station` now has 17 tests. The 4 new ones cover the collection:
+  * one callback per sensor per cycle, in vector order, all on the sampler thread
+  * a failing sensor does not block the others
+  * `stop()` during sensor 0 starts no read of sensor 1
+  * a null entry is skipped and indices keep their meaning
+* `station_e2e` expects both topics, both on the console and through `mosquitto_sub -t 'han/ese/#'`.
+
+Run on this branch on an x86-64 Linux host (GCC 13.3, Clang 18.1.3, mosquitto 2.0.18); all builds
+with `-Wall -Wextra -Wpedantic -Werror`:
+
+| Check | Result |
+|---|---|
+| Clean GCC build (`cmake -S . -B build-clean -DBME280_WARNINGS_AS_ERRORS=ON`) | 0 warnings; 7/7 suites pass, none skipped |
+| Clang | 0 warnings; 7/7 |
+| Without the Linux layer (`-DBME280_BUILD_LINUX=OFF`) | 0 warnings; 4/4 |
+| ASan + UBSan / ThreadSanitizer | 7/7 each, no reports |
+| Valgrind (`test_core`, `test_station`, `test_mqtt_publisher` with a real broker) | 0 errors, 0 leaks, 0 leaked fds |
+| cppcheck (core, app, Linux platform) | 1 style suggestion (`std::any_of` for the sensor `init()` loop in `main`), kept as a plain loop on purpose |
+| aarch64 cross build, run under `qemu-aarch64` | 0 warnings; 6/6 (with libmosquitto:arm64 installed, `MqttPublisher` and `station_main` are cross-built too; the broker cases of `mqtt_publisher` are skipped when cross-compiling) |
+| armhf cross build, run under `qemu-arm` | 0 warnings; 5/5 (no armhf libmosquitto in this environment: MQTT parts not built) |
+| Arduino sketches (`nano_33_iot`, arm-none-eabi-gcc with the arduino-cli recipe, not arduino-cli itself) | both compile and link, 0 library/sketch warnings; `ReadEverySecond` 27292 B flash |
+| `core` has no outgoing dependency | no app/platform include in `include/bme280/` or `src/Bme280.cpp`; `nm -u libbme280_core.a`: only Bosch and C++ runtime symbols |
+
+**Not verified (pending hardware):** the two-sensor station has not run with a real BME280 on a
+Raspberry Pi; the capture above comes from `--fake` on the laptop.
+
 ## Week 5: sampling thread, callback, MQTT
+
+*This section describes the Week 5 hand-in (`v0.5-mqtt`). Week 6 moved `EnvironmentSensor`
+into `include/bme280/` (namespace `bme280`), made the `Sampler` take a vector of sensors and gave
+the callback a sensor index; see "Week 6" above.*
 
 ```
 station_main (composition root, the only place concrete classes meet)
