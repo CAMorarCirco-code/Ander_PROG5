@@ -13,14 +13,14 @@ add_executable(test_arduino_platform_fake
 target_include_directories(test_arduino_platform_fake PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/fake_arduino
     ${PROJECT_SOURCE_DIR}/platform/arduino)
-target_link_libraries(test_arduino_platform_fake PRIVATE bme280_core)
+target_link_libraries(test_arduino_platform_fake PRIVATE hal)
 bme280_set_warnings(test_arduino_platform_fake)
 add_test(NAME arduino_platform_fake COMMAND test_arduino_platform_fake)
 
 if(BME280_BUILD_LINUX)
     # LinuxI2cBus against a fake ioctl() (message layout, end-to-end core).
     add_executable(test_linux_i2c_bus_fake test_linux_i2c_bus_fake.cpp)
-    target_link_libraries(test_linux_i2c_bus_fake PRIVATE bme280_linux)
+    target_link_libraries(test_linux_i2c_bus_fake PRIVATE bme280_linux bme280_core)
     bme280_set_warnings(test_linux_i2c_bus_fake)
     add_test(NAME linux_i2c_bus_fake COMMAND test_linux_i2c_bus_fake)
 
@@ -77,7 +77,11 @@ if(BME280_BUILD_STATION)
     FetchContent_MakeAvailable(doctest)
 
     add_executable(test_unit test_unit.cpp)
-    target_link_libraries(test_unit PRIVATE bme280_station doctest::doctest)
+    target_link_libraries(test_unit PRIVATE bme280_station bme280_core doctest::doctest)
     bme280_set_warnings(test_unit)
     add_test(NAME unit COMMAND test_unit)
 endif()
+
+# Week 7 package rules (hal depends on nothing; bme280, platform and station
+# depend on hal; neither platform nor station depends on bme280).
+add_test(NAME dependencies COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/check_dependencies.sh ${PROJECT_SOURCE_DIR})

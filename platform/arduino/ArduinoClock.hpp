@@ -1,14 +1,14 @@
 #pragma once
 
-// Arduino implementation of bme280::Clock on top of delay()/delayMicroseconds().
+// Arduino implementation of hal::Clock on top of delay()/delayMicroseconds().
 
-#include "../../include/bme280/Clock.hpp"
+#include "../../include/hal/Clock.hpp"
 
-namespace bme280 {
+namespace platform {
 
-class ArduinoClock final : public Clock {
+class ArduinoClock final : public hal::Clock {
 public:
     void delayUs(uint32_t us) override;
 };
 
-} // namespace bme280
+} // namespace platform

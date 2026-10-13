@@ -2,15 +2,15 @@
 
 // What the station sees of a sensor. Nothing about I2C, Bosch or BME280.
 // DIP: Sampler depends on this, never on bme280::Bme280 directly;
-// bme280::Bme280 implements it.
+// bme280::Bme280 and station::FakeSensor implement it.
 //
-// Part of the core package (week 6): the core owns its interfaces, so the
-// core has no dependency on the app layer. Relative include, like the other
-// core headers, so it also compiles in the Arduino IDE.
+// Part of the hal package (week 7): shared by every sensor (bme280::Bme280,
+// station::FakeSensor, ...) and every user (Sampler). Depends on nothing but
+// hal/Types.hpp. Relative include so it also compiles in the Arduino IDE.
 
 #include "Types.hpp"
 
-namespace bme280 {
+namespace hal {
 
 class EnvironmentSensor {
 public:
@@ -31,4 +31,4 @@ protected:
     EnvironmentSensor& operator=(const EnvironmentSensor&) = default;
 };
 
-} // namespace bme280
+} // namespace hal

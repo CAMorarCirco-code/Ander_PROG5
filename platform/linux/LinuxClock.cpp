@@ -3,7 +3,7 @@
 #include <cerrno>
 #include <ctime>
 
-namespace bme280 {
+namespace platform {
 
 void LinuxClock::delayUs(uint32_t us)
 {
@@ -22,4 +22,4 @@ void LinuxClock::delayUs(uint32_t us)
     }
 }
 
-} // namespace bme280
+} // namespace platform

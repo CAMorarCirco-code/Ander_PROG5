@@ -3,13 +3,13 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace bme280 {
+namespace hal {
 
 /// Register-level byte transport the sensor needs (DIP: the driver depends on
 /// this abstraction, never on Wire/HAL/Linux directly). Timing is not part of
 /// it, see Clock.hpp (ISP).
-/// Implementations: ArduinoI2cBus (platform/arduino), LinuxI2cBus
-/// (platform/linux), MockBus (tests).
+/// Part of the hal package (week 7): shared by all sensors, depends on nothing.
+/// Implementations: platform::ArduinoI2cBus, platform::LinuxI2cBus, MockBus (tests).
 class Bus {
 public:
     virtual ~Bus() = default;
@@ -34,4 +34,4 @@ protected:
     Bus& operator=(const Bus&) = default;
 };
 
-} // namespace bme280
+} // namespace hal

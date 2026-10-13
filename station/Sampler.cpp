@@ -4,13 +4,13 @@
 
 namespace station {
 
-Sampler::Sampler(std::vector<bme280::EnvironmentSensor*> sensors, std::chrono::milliseconds period)
+Sampler::Sampler(std::vector<hal::EnvironmentSensor*> sensors, std::chrono::milliseconds period)
     : sensors_(std::move(sensors)), period_(period)
 {
 }
 
-Sampler::Sampler(bme280::EnvironmentSensor& sensor, std::chrono::milliseconds period)
-    : Sampler(std::vector<bme280::EnvironmentSensor*>{&sensor}, period)
+Sampler::Sampler(hal::EnvironmentSensor& sensor, std::chrono::milliseconds period)
+    : Sampler(std::vector<hal::EnvironmentSensor*>{&sensor}, period)
 {
 }
 
@@ -74,8 +74,8 @@ void Sampler::run()
             if (i > 0 && !isRunning()) {
                 return;             // stop() during a cycle: do not start the next read
             }
-            bme280::Measurement m;
-            if (sensors_[i] != nullptr && sensors_[i]->readForced(m) == bme280::Error::None && callback) {
+            hal::Measurement m;
+            if (sensors_[i] != nullptr && sensors_[i]->readForced(m) == hal::Error::None && callback) {
                 callback(i, m);     // sampler thread, not main
             }
         }

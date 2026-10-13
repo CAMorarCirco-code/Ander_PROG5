@@ -4,8 +4,8 @@
 #include <Wire.h>
 #include <Bme280Lib.h>
 
-static bme280::ArduinoI2cBus bus(Wire, static_cast<uint8_t>(bme280::I2cAddress::Low));
-static bme280::ArduinoClock sensorClock;
+static platform::ArduinoI2cBus bus(Wire, static_cast<uint8_t>(bme280::I2cAddress::Low));
+static platform::ArduinoClock sensorClock;
 static bme280::Bme280 sensor(bus, sensorClock);
 
 void setup()

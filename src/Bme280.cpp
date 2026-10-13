@@ -107,7 +107,7 @@ void Bme280::toBoschSettings(const Config& in, bme280_settings& out)
 
 // ------------------------------------------------------------- lifecycle --
 
-Bme280::Bme280(Bus& bus, Clock& clock) : bus_(bus), clock_(clock)
+Bme280::Bme280(hal::Bus& bus, hal::Clock& clock) : bus_(bus), clock_(clock)
 {
     dev_.intf     = BME280_I2C_INTF;
     dev_.intf_ptr = this;

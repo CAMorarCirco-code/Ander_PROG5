@@ -27,26 +27,30 @@ template <typename T>
 struct HasRead<T, std::void_t<decltype(std::declval<T&>().read(uint8_t{}, nullptr, size_t{}))>>
     : std::true_type {};
 
-static_assert(!HasDelayUs<bme280::Bus>::value, "Bus must not provide timing");
-static_assert(HasRead<bme280::Bus>::value, "Bus provides read()");
-static_assert(HasDelayUs<bme280::Clock>::value, "Clock provides delayUs()");
-static_assert(!HasRead<bme280::Clock>::value, "Clock must not provide bus access");
-static_assert(std::has_virtual_destructor<bme280::Bus>::value, "Bus needs a virtual destructor");
-static_assert(std::has_virtual_destructor<bme280::Clock>::value, "Clock needs a virtual destructor");
-static_assert(std::is_abstract<bme280::Bus>::value && std::is_abstract<bme280::Clock>::value, "interfaces");
-static_assert(std::is_constructible<bme280::Bme280, bme280::Bus&, bme280::Clock&>::value,
+static_assert(!HasDelayUs<hal::Bus>::value, "Bus must not provide timing");
+static_assert(HasRead<hal::Bus>::value, "Bus provides read()");
+static_assert(HasDelayUs<hal::Clock>::value, "Clock provides delayUs()");
+static_assert(!HasRead<hal::Clock>::value, "Clock must not provide bus access");
+static_assert(std::has_virtual_destructor<hal::Bus>::value, "Bus needs a virtual destructor");
+static_assert(std::has_virtual_destructor<hal::Clock>::value, "Clock needs a virtual destructor");
+static_assert(std::is_abstract<hal::Bus>::value && std::is_abstract<hal::Clock>::value, "interfaces");
+static_assert(std::is_constructible<bme280::Bme280, hal::Bus&, hal::Clock&>::value,
               "Bme280(Bus&, Clock&)");
-static_assert(!std::is_constructible<bme280::Bme280, bme280::Bus&>::value, "a Clock is required");
+static_assert(!std::is_constructible<bme280::Bme280, hal::Bus&>::value, "a Clock is required");
 static_assert(!std::is_copy_constructible<bme280::Bme280>::value, "Bme280 is non-copyable");
 static_assert(!std::is_move_constructible<bme280::Bme280>::value, "Bme280 is non-movable");
 // Week 5: Bme280 implements the interface the Sampler depends on (DIP).
-static_assert(std::is_base_of<bme280::EnvironmentSensor, bme280::Bme280>::value,
+static_assert(std::is_base_of<hal::EnvironmentSensor, bme280::Bme280>::value,
               "Bme280 is an EnvironmentSensor");
-static_assert(std::has_virtual_destructor<bme280::EnvironmentSensor>::value, "interface");
+static_assert(std::has_virtual_destructor<hal::EnvironmentSensor>::value, "interface");
+// Week 7 review: no slicing copy-assignment through the interfaces.
+static_assert(!std::is_copy_assignable<hal::EnvironmentSensor>::value, "protected copy operations");
+static_assert(!std::is_copy_assignable<hal::Bus>::value && !std::is_copy_assignable<hal::Clock>::value,
+              "protected copy operations");
 
 // --- Test doubles ---------------------------------------------------------
 
-class MockBus final : public bme280::Bus {
+class MockBus final : public hal::Bus {
 public:
     test::FakeBme280 chip;
     bool             fail = false;
@@ -177,7 +181,7 @@ void worksThroughEnvironmentSensorInterface()
     MockBus   bus;
     FakeClock clock;
     bme280::Bme280             concrete(bus, clock);
-    bme280::EnvironmentSensor& sensor = concrete;
+    hal::EnvironmentSensor& sensor = concrete;
     bme280::Measurement m;
     CHECK(sensor.readForced(m) == bme280::Error::NotInitialised);
     CHECK(sensor.init() == bme280::Error::None);

@@ -27,7 +27,7 @@ void readIsRepeatedStartThenRequest()
 {
     TwoWire wire;
     wire.rxData = {0x60, 0x11, 0x22};
-    bme280::ArduinoI2cBus bus(wire, 0x76);
+    platform::ArduinoI2cBus bus(wire, 0x76);
     uint8_t buf[3] = {};
     CHECK(bus.read(0xD0, buf, 3));
     CHECK((wire.calls == Calls{"begin 76", "end stop=0", "request 76 3"}));
@@ -38,7 +38,7 @@ void readIsRepeatedStartThenRequest()
 void readRejectsInvalidArgumentsWithoutBusTraffic()
 {
     TwoWire wire;
-    bme280::ArduinoI2cBus bus(wire, 0x76);
+    platform::ArduinoI2cBus bus(wire, 0x76);
     uint8_t buf[64] = {};
     CHECK(!bus.read(0xD0, nullptr, 1));    // the Week 4 review fix
     CHECK(!bus.read(0xD0, nullptr, 0));
@@ -53,7 +53,7 @@ void readFailsOnNackOrShortRead()
 {
     TwoWire wire;
     wire.rxData = {1, 2, 3, 4};
-    bme280::ArduinoI2cBus bus(wire, 0x76);
+    platform::ArduinoI2cBus bus(wire, 0x76);
     uint8_t buf[4] = {9, 9, 9, 9};
 
     wire.endResult = 2;                    // NACK on address
@@ -70,7 +70,7 @@ void readFailsOnNackOrShortRead()
 void writeIsRegisterThenDataInOneTransmission()
 {
     TwoWire wire;
-    bme280::ArduinoI2cBus bus(wire, 0x77);
+    platform::ArduinoI2cBus bus(wire, 0x77);
     const uint8_t data[] = {0x05, 0xF4, 0x25};
     CHECK(bus.write(0xF2, data, sizeof data));
     CHECK((wire.calls == Calls{"begin 77", "end stop=1"}));
@@ -83,7 +83,7 @@ void writeIsRegisterThenDataInOneTransmission()
 void writeRejectsInvalidArgumentsWithoutBusTraffic()
 {
     TwoWire wire;
-    bme280::ArduinoI2cBus bus(wire, 0x76);
+    platform::ArduinoI2cBus bus(wire, 0x76);
     uint8_t buf[32] = {};
     CHECK(!bus.write(0xF4, nullptr, 1));   // consistent with LinuxI2cBus
     CHECK(!bus.write(0xF4, buf, 32));      // 32 + register byte > 32
@@ -95,7 +95,7 @@ void writeRejectsInvalidArgumentsWithoutBusTraffic()
 
 void clockSplitsMillisAndMicros()
 {
-    bme280::ArduinoClock clock;
+    platform::ArduinoClock clock;
     g_delays.clear();
     clock.delayUs(9300);
     clock.delayUs(2000);

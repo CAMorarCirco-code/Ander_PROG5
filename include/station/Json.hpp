@@ -6,14 +6,14 @@
 // snprintf uses the "C" locale (the program never calls setlocale), so the
 // decimal separator is always '.'.
 
-#include "../bme280/Types.hpp"
+#include "../hal/Types.hpp"
 
 #include <cstdio>
 #include <string>
 
 namespace station {
 
-inline std::string toJson(const bme280::Measurement& m)
+inline std::string toJson(const hal::Measurement& m)
 {
     char buf[160];   // large enough even for FLT_MAX in every field
     std::snprintf(buf, sizeof buf, "{\"t\":%.2f,\"p\":%.0f,\"h\":%.1f}", static_cast<double>(m.temperatureC),

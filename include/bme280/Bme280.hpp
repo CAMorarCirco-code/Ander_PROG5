@@ -3,10 +3,10 @@
 // Includes are relative to this file on purpose: the Arduino IDE only adds a
 // library's src/ folder to the include path, CMake adds include/. A relative
 // path works for both without any platform knowledge in the core.
-#include "Bus.hpp"
-#include "Clock.hpp"
+#include "../hal/Bus.hpp"
+#include "../hal/Clock.hpp"
+#include "../hal/EnvironmentSensor.hpp"
 #include "Types.hpp"
-#include "EnvironmentSensor.hpp"
 
 // The wrapper converts integer compensation results (see Bme280.cpp), so the
 // Bosch driver must be built with BME280_32BIT_ENABLE everywhere. CMake
@@ -32,10 +32,10 @@ namespace bme280 {
 ///
 /// Lifetime: `bus` and `clock` are borrowed, not owned. Both must outlive
 /// this object; the caller (sketch / main) creates them first.
-class Bme280 : public EnvironmentSensor {
+class Bme280 : public hal::EnvironmentSensor {
 public:
     /// Does not touch hardware; call init() for that.
-    Bme280(Bus& bus, Clock& clock);
+    Bme280(hal::Bus& bus, hal::Clock& clock);
 
     // Non-copyable and non-movable: the Bosch struct stores a pointer back
     // to this object (intf_ptr), which a copy or move would leave dangling.
@@ -76,8 +76,8 @@ private:
     static Error toError(int8_t bosch_result);
     static void  toBoschSettings(const Config& in, bme280_settings& out);
 
-    Bus&            bus_;
-    Clock&          clock_;
+    hal::Bus&       bus_;
+    hal::Clock&     clock_;
     bme280_dev      dev_{};
     bme280_settings settings_{};
     bool            initialised_ = false;

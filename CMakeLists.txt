@@ -3,8 +3,10 @@ project(Bme280Lib VERSION 0.4.0 LANGUAGES C CXX)
 
 # Target structure (platform choice is made here, never inside the core):
 #
+#   hal            Bus, Clock, EnvironmentSensor,       <- any platform
+#                  Error, Measurement (header-only)
 #   bme280_bosch   Bosch SensorAPI (C, vendored)        <- any platform
-#   bme280_core    Bme280 + Bus/Clock interfaces       <- any platform
+#   bme280_core    Bme280 (uses hal)                   <- any platform
 #   bme280_linux   LinuxI2cBus + LinuxClock (i2c-dev)  <- Linux only
 #   bme280_rpi_smoke                                   <- Linux only
 #   bme280_station Sampler (thread + callback),        <- any platform with
@@ -47,6 +49,12 @@ function(bme280_set_warnings target)
     endif()
 endfunction()
 
+# --- hal: what every sensor shares (week 7) -----------------------------------
+# Bus, Clock, EnvironmentSensor, Error, Measurement. Header-only, depends on
+# nothing; bme280, the platforms and the station depend on it.
+add_library(hal INTERFACE)
+target_include_directories(hal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 # --- Bosch BME280 SensorAPI (unmodified) -------------------------------------
 add_library(bme280_bosch STATIC third_party/bme280/bme280.c)
 # Bme280.cpp converts the 32-bit integer compensation output (see Bme280.hpp).
@@ -58,7 +66,7 @@ bme280_set_warnings(bme280_bosch)
 add_library(bme280_core STATIC src/Bme280.cpp)
 add_library(bme280::core ALIAS bme280_core)
 target_include_directories(bme280_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(bme280_core PUBLIC bme280_bosch)
+target_link_libraries(bme280_core PUBLIC hal bme280_bosch)
 bme280_set_warnings(bme280_core)
 
 # --- Station (week 5) -------------------------------------------------------

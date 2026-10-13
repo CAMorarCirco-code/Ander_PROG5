@@ -144,7 +144,7 @@ void reset()
 void constructorSelectsSlaveAddress()
 {
     reset();
-    bme280::LinuxI2cBus bus(0x77, kDevice);
+    platform::LinuxI2cBus bus(0x77, kDevice);
     CHECK(g_kernel.slaveAddr == 0x77);
     CHECK(bus.address() == 0x77);
     CHECK(bus.device() == kDevice);
@@ -153,7 +153,7 @@ void constructorSelectsSlaveAddress()
 void readIsOneCombinedTransactionWithRepeatedStart()
 {
     reset();
-    bme280::LinuxI2cBus bus(0x76, kDevice);
+    platform::LinuxI2cBus bus(0x76, kDevice);
     uint8_t id = 0;
     CHECK(bus.read(0xD0, &id, 1));
     CHECK(id == 0x60);
@@ -177,7 +177,7 @@ void readIsOneCombinedTransactionWithRepeatedStart()
 void writeIsOneMessageRegisterThenData()
 {
     reset();
-    bme280::LinuxI2cBus bus(0x76, kDevice);
+    platform::LinuxI2cBus bus(0x76, kDevice);
     // Bosch burst format: value for reg, then (reg, value) pairs.
     const uint8_t data[] = {0x05, 0xF4, 0x25};   // 0x25: osrs_t x1, osrs_p x1, forced
     CHECK(bus.write(0xF2, data, sizeof data));
@@ -195,7 +195,7 @@ void writeIsOneMessageRegisterThenData()
 void invalidLengthsAreRejectedWithoutBusTraffic()
 {
     reset();
-    bme280::LinuxI2cBus bus(0x76, kDevice);
+    platform::LinuxI2cBus bus(0x76, kDevice);
     uint8_t buf[64] = {};
     CHECK(!bus.read(0x88, buf, 0));
     CHECK(!bus.read(0x88, buf, 33));
@@ -211,7 +211,7 @@ void invalidLengthsAreRejectedWithoutBusTraffic()
 void kernelErrorsBecomeFalse()
 {
     reset();
-    bme280::LinuxI2cBus bus(0x76, kDevice);
+    platform::LinuxI2cBus bus(0x76, kDevice);
     g_kernel.rdwrErrno = EREMOTEIO;   // NACK
     uint8_t b = 0;
     CHECK(!bus.read(0xD0, &b, 1));
@@ -225,7 +225,7 @@ void slaveSelectFailureThrowsAndDoesNotLeakFd()
     const int fdsBefore = test::openFdCount();
     bool threw = false;
     try {
-        bme280::LinuxI2cBus bus(0x76, kDevice);
+        platform::LinuxI2cBus bus(0x76, kDevice);
     } catch (const std::system_error& e) {
         threw = e.code().value() == EBUSY;
     }
@@ -236,8 +236,8 @@ void slaveSelectFailureThrowsAndDoesNotLeakFd()
 void coreRunsEndToEndOverLinuxBus()
 {
     reset();
-    bme280::LinuxI2cBus bus(0x76, kDevice);
-    bme280::LinuxClock  clock;   // real clock_nanosleep
+    platform::LinuxI2cBus bus(0x76, kDevice);
+    platform::LinuxClock  clock;   // real clock_nanosleep
     bme280::Bme280      sensor(bus, clock);
 
     CHECK(sensor.init() == bme280::Error::None);
@@ -264,8 +264,8 @@ void wrongAddressGivesBusFailure()
 {
     reset();
     g_kernel.chipAddress = 0x77;   // sensor strapped high, program uses 0x76
-    bme280::LinuxI2cBus bus(0x76, kDevice);
-    bme280::LinuxClock  clock;
+    platform::LinuxI2cBus bus(0x76, kDevice);
+    platform::LinuxClock  clock;
     bme280::Bme280      sensor(bus, clock);
     CHECK(sensor.init() == bme280::Error::BusFailure);
 }

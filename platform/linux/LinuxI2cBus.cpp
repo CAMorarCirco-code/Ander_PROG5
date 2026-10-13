@@ -10,7 +10,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-namespace bme280 {
+namespace platform {
 
 LinuxI2cBus::LinuxI2cBus(uint8_t address, const std::string& device)
     : device_(device), address_(address)
@@ -88,4 +88,4 @@ bool LinuxI2cBus::write(uint8_t reg, const uint8_t* data, size_t len)
     return ::ioctl(fd_, I2C_RDWR, &xfer) == 1;
 }
 
-} // namespace bme280
+} // namespace platform

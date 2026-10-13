@@ -3,14 +3,14 @@
 // Week 7: a Clock that only counts. Records every requested delay so a test
 // can check *that* the sensor waited and *how long*, without sleeping.
 
-#include <bme280/Clock.hpp>
+#include <hal/Clock.hpp>
 
 #include <algorithm>
 #include <vector>
 
 namespace test {
 
-class FakeClock final : public bme280::Clock {
+class FakeClock final : public hal::Clock {
 public:
     void delayUs(uint32_t us) override { delays_.push_back(us); }
 

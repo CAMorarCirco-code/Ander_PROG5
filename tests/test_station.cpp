@@ -24,16 +24,17 @@ namespace {
 
 using namespace std::chrono_literals;
 using Clock = std::chrono::steady_clock;
-using bme280::Error;
-using bme280::Measurement;
+using hal::Error;
+using hal::Measurement;
 
 static_assert(!std::is_copy_constructible<station::Sampler>::value, "Sampler owns a thread");
-static_assert(std::is_constructible<station::Sampler, bme280::EnvironmentSensor&, std::chrono::milliseconds>::value,
+static_assert(!std::is_copy_assignable<station::Publisher>::value, "protected copy operations (no slicing)");
+static_assert(std::is_constructible<station::Sampler, hal::EnvironmentSensor&, std::chrono::milliseconds>::value,
               "Sampler depends on the interface");
-static_assert(std::is_constructible<station::Sampler, std::vector<bme280::EnvironmentSensor*>,
+static_assert(std::is_constructible<station::Sampler, std::vector<hal::EnvironmentSensor*>,
                                     std::chrono::milliseconds>::value,
               "week 6: Sampler takes a collection of EnvironmentSensor*");
-static_assert(std::is_abstract<bme280::EnvironmentSensor>::value && std::is_abstract<station::Publisher>::value,
+static_assert(std::is_abstract<hal::EnvironmentSensor>::value && std::is_abstract<station::Publisher>::value,
               "interfaces");
 
 double ms(Clock::duration d)
@@ -73,7 +74,7 @@ struct Recorder {
 
 /// Test sensor: configurable read time and failures, and it detects two
 /// overlapping readForced() calls (the pitfall "sampler + main").
-class ProbeSensor final : public bme280::EnvironmentSensor {
+class ProbeSensor final : public hal::EnvironmentSensor {
 public:
     std::chrono::milliseconds readTime{0};
     int                       failEvery = 0;   // every n-th read fails (0: never)
@@ -364,7 +365,7 @@ void oneCallbackPerSensorPerCycleInOrder()
     station::FakeSensor fake(20.0F);
     ProbeSensor         probe;               // temperature = read number
     (void)fake.init();
-    std::vector<bme280::EnvironmentSensor*> sensors{&fake, &probe};
+    std::vector<hal::EnvironmentSensor*> sensors{&fake, &probe};
     IndexedRecorder rec;
     station::Sampler sampler(sensors, 10ms);
     CHECK(sampler.sensorCount() == 2);

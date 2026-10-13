@@ -17,17 +17,17 @@
 
 namespace {
 
-static_assert(!std::is_copy_constructible<bme280::LinuxI2cBus>::value, "fd has one owner");
-static_assert(!std::is_copy_assignable<bme280::LinuxI2cBus>::value, "fd has one owner");
-static_assert(!std::is_move_constructible<bme280::LinuxI2cBus>::value, "Bme280 holds a Bus&");
-static_assert(std::is_base_of<bme280::Bus, bme280::LinuxI2cBus>::value, "LinuxI2cBus is a Bus");
-static_assert(std::is_base_of<bme280::Clock, bme280::LinuxClock>::value, "LinuxClock is a Clock");
-static_assert(!std::is_base_of<bme280::Clock, bme280::LinuxI2cBus>::value, "bus is not a clock (ISP)");
+static_assert(!std::is_copy_constructible<platform::LinuxI2cBus>::value, "fd has one owner");
+static_assert(!std::is_copy_assignable<platform::LinuxI2cBus>::value, "fd has one owner");
+static_assert(!std::is_move_constructible<platform::LinuxI2cBus>::value, "Bme280 holds a Bus&");
+static_assert(std::is_base_of<hal::Bus, platform::LinuxI2cBus>::value, "LinuxI2cBus is a Bus");
+static_assert(std::is_base_of<hal::Clock, platform::LinuxClock>::value, "LinuxClock is a Clock");
+static_assert(!std::is_base_of<hal::Clock, platform::LinuxI2cBus>::value, "bus is not a clock (ISP)");
 
 int errnoOfConstruction(const char* device)
 {
     try {
-        bme280::LinuxI2cBus bus(0x76, device);
+        platform::LinuxI2cBus bus(0x76, device);
     } catch (const std::system_error& e) {
         return e.code().value();
     }
@@ -58,7 +58,7 @@ void repeatedFailuresDoNotLeak()
     CHECK(test::openFdCount() == before);
 }
 
-double elapsedUs(bme280::Clock& clock, uint32_t us)
+double elapsedUs(hal::Clock& clock, uint32_t us)
 {
     const auto t0 = std::chrono::steady_clock::now();
     clock.delayUs(us);
@@ -68,7 +68,7 @@ double elapsedUs(bme280::Clock& clock, uint32_t us)
 
 void clockWaitsAtLeastRequested()
 {
-    bme280::LinuxClock clock;
+    platform::LinuxClock clock;
     for (uint32_t us : {0U, 1U, 500U, 2000U, 9300U, 1500000U}) {
         const double got = elapsedUs(clock, us);
         CHECK(got >= static_cast<double>(us));
@@ -92,7 +92,7 @@ void clockSurvivesSignals()
     timer.it_value.tv_usec    = 2000;
     setitimer(ITIMER_REAL, &timer, nullptr);
 
-    bme280::LinuxClock clock;
+    platform::LinuxClock clock;
     const double got = elapsedUs(clock, 50000U);
 
     timer = itimerval{};

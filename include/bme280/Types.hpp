@@ -1,33 +1,18 @@
 #pragma once
 
+#include "../hal/Types.hpp"
+
 #include <cstdint>
+
+// BME280-specific types. The shared ones (Error, Measurement) live in hal;
+// they are re-exported here so users of the sensor can keep writing
+// bme280::Error / bme280::Measurement.
 
 namespace bme280 {
 
-/// Every public method returns one of these. No exceptions, no negative ints.
-enum class Error : uint8_t {
-    None = 0,
-    NotInitialised,   ///< read() called before init()
-    BusFailure,       ///< Bus::read/write returned false
-    WrongChipId,      ///< ID register did not contain 0x60
-    InvalidConfig,    ///< Bosch API rejected the settings
-    Unknown           ///< Bosch API returned a code we did not map
-};
-
-/// Name of an Error, for log output. Returns a string literal: no
-/// std::string, no allocation, so it is fine on an MCU.
-inline const char* errorName(Error e)
-{
-    switch (e) {
-        case Error::None:           return "None";
-        case Error::NotInitialised: return "NotInitialised";
-        case Error::BusFailure:     return "BusFailure";
-        case Error::WrongChipId:    return "WrongChipId";
-        case Error::InvalidConfig:  return "InvalidConfig";
-        case Error::Unknown:        return "Unknown";
-    }
-    return "Unknown";
-}
+using hal::Error;
+using hal::errorName;
+using hal::Measurement;
 
 /// I2C address depends on the SDO pin level.
 enum class I2cAddress : uint8_t { Low = 0x76, High = 0x77 };
@@ -45,14 +30,6 @@ struct Config {
     Oversampling humidity    = Oversampling::x1;
     Filter       filter      = Filter::Off;
     Standby      standby     = Standby::ms1000;  ///< only used in Mode::Normal
-};
-
-/// The hand-off to the rest of the weather station (MQTT payload, DB).
-/// Units are part of the name so they cannot be misread.
-struct Measurement {
-    float temperatureC = 0.0F;
-    float pressurePa   = 0.0F;
-    float humidityPct  = 0.0F;
 };
 
 } // namespace bme280

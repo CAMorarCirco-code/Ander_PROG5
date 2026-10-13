@@ -1,17 +1,17 @@
 #pragma once
 
-// Arduino implementation of bme280::Bus on top of Wire (TwoWire).
+// Arduino implementation of hal::Bus on top of Wire (TwoWire).
 // Together with ArduinoClock this is the only library code that includes
 // <Wire.h> / <Arduino.h>; the core only sees a Bus& and a Clock&.
 
-#include "../../include/bme280/Bus.hpp"
+#include "../../include/hal/Bus.hpp"
 
 #include <Arduino.h>
 #include <Wire.h>
 
-namespace bme280 {
+namespace platform {
 
-class ArduinoI2cBus final : public Bus {
+class ArduinoI2cBus final : public hal::Bus {
 public:
     /// `wire` must already be started (Wire.begin()) by its owner, the sketch.
     ArduinoI2cBus(TwoWire& wire, uint8_t address);
@@ -31,4 +31,4 @@ private:
     uint8_t  address_;
 };
 
-} // namespace bme280
+} // namespace platform

@@ -1,16 +1,16 @@
 #pragma once
 
-// Linux (Raspberry Pi) implementation of bme280::Bus on top of the kernel
+// Linux (Raspberry Pi) implementation of hal::Bus on top of the kernel
 // i2c-dev interface (/dev/i2c-N). Only this file pair and LinuxClock include
 // Linux headers; the core only sees a Bus&.
 
-#include <bme280/Bus.hpp>
+#include <hal/Bus.hpp>
 
 #include <cstddef>
 #include <cstdint>
 #include <string>
 
-namespace bme280 {
+namespace platform {
 
 /// RAII owner of one /dev/i2c-N file descriptor, bound to one slave address.
 ///
@@ -21,7 +21,7 @@ namespace bme280 {
 /// Non-copyable (two owners would close the same fd) and non-movable (a
 /// Bme280 keeps a Bus& to it, which a move would leave pointing at an empty
 /// shell).
-class LinuxI2cBus final : public Bus {
+class LinuxI2cBus final : public hal::Bus {
 public:
     static constexpr const char* kDefaultDevice = "/dev/i2c-1";   // RPi header pins 3/5
 
@@ -56,4 +56,4 @@ private:
     int         fd_ = -1;
 };
 
-} // namespace bme280
+} // namespace platform

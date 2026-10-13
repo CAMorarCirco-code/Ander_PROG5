@@ -17,6 +17,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <string>
 
 using bme280::Bme280;
 using bme280::Error;
@@ -215,6 +216,16 @@ TEST_CASE("compensation matches the datasheet's worked example")
     CHECK(m.humidityPct == doctest::Approx(referenceHumidity()).epsilon(0.002));
     CHECK(m.humidityPct > 0.0F);
     CHECK(m.humidityPct < 100.0F);
+}
+
+TEST_CASE("errorName() names every Error (shared by the examples)")
+{
+    CHECK(std::string(hal::errorName(Error::None)) == "None");
+    CHECK(std::string(hal::errorName(Error::NotInitialised)) == "NotInitialised");
+    CHECK(std::string(hal::errorName(Error::BusFailure)) == "BusFailure");
+    CHECK(std::string(hal::errorName(Error::WrongChipId)) == "WrongChipId");
+    CHECK(std::string(hal::errorName(Error::InvalidConfig)) == "InvalidConfig");
+    CHECK(std::string(hal::errorName(Error::Unknown)) == "Unknown");
 }
 
 // 7. MqttPublisher is not unit-tested: it needs a running broker, so it is

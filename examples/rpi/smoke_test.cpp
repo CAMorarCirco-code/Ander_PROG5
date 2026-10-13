@@ -25,7 +25,7 @@ void onSignal(int) { g_stop = 1; }
 
 // LinuxClock deliberately sleeps through signals (Clock promises "at least"),
 // so wait in short slices to react to Ctrl+C within ~100 ms.
-void waitMs(bme280::Clock& clock, unsigned long ms)
+void waitMs(hal::Clock& clock, unsigned long ms)
 {
     for (unsigned long waited = 0; waited < ms && g_stop == 0; waited += 100) {
         const unsigned long slice = (ms - waited < 100) ? (ms - waited) : 100;
@@ -55,7 +55,7 @@ int usage(const char* argv0)
 
 int main(int argc, char** argv)
 {
-    std::string   device   = bme280::LinuxI2cBus::kDefaultDevice;
+    std::string   device   = platform::LinuxI2cBus::kDefaultDevice;
     unsigned long address  = static_cast<unsigned long>(bme280::I2cAddress::Low);
     unsigned long interval = 1000;
     unsigned long count    = 10;
@@ -78,8 +78,8 @@ int main(int argc, char** argv)
     try {
         // Owners first, user last: bus and clock outlive the sensor because
         // they are declared before it (destroyed in reverse order).
-        bme280::LinuxI2cBus bus(static_cast<uint8_t>(address), device);
-        bme280::LinuxClock  clock;
+        platform::LinuxI2cBus bus(static_cast<uint8_t>(address), device);
+        platform::LinuxClock  clock;
         bme280::Bme280      sensor(bus, clock);
 
         const bme280::Error err = sensor.init();

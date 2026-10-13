@@ -5,7 +5,7 @@
 // it came from. Owns the thread (composition): stop() joins it, the destructor
 // calls stop(), the thread never outlives the Sampler.
 //
-// Week 6 (polymorphism): the sensors are bme280::EnvironmentSensor* - a real
+// Week 6 (polymorphism): the sensors are hal::EnvironmentSensor* - a real
 // Bme280, a FakeSensor, or any other implementation. The sampler only calls
 // the interface; no dynamic_cast, no "if (sensor is Bme280)".
 //
@@ -13,7 +13,7 @@
 // the sampler runs it is their only user (they are not thread-safe and do not
 // need to be): init() them before start().
 
-#include "../bme280/EnvironmentSensor.hpp"
+#include "../hal/EnvironmentSensor.hpp"
 
 #include <chrono>
 #include <condition_variable>
@@ -29,13 +29,13 @@ class Sampler {
 public:
     /// sensorIndex is the position of the sensor in the vector given to the
     /// constructor, so the owner can map it to a topic.
-    using Callback = std::function<void(std::size_t sensorIndex, const bme280::Measurement&)>;
+    using Callback = std::function<void(std::size_t sensorIndex, const hal::Measurement&)>;
 
     /// One read of every sensor, in vector order, per `period`.
-    Sampler(std::vector<bme280::EnvironmentSensor*> sensors, std::chrono::milliseconds period);
+    Sampler(std::vector<hal::EnvironmentSensor*> sensors, std::chrono::milliseconds period);
 
     /// Convenience for a single sensor (sensorIndex is always 0).
-    Sampler(bme280::EnvironmentSensor& sensor, std::chrono::milliseconds period);
+    Sampler(hal::EnvironmentSensor& sensor, std::chrono::milliseconds period);
 
     ~Sampler();
 
@@ -64,7 +64,7 @@ public:
 private:
     void run();
 
-    const std::vector<bme280::EnvironmentSensor*> sensors_;
+    const std::vector<hal::EnvironmentSensor*> sensors_;
     const std::chrono::milliseconds               period_;
 
     mutable std::mutex      mutex_;     // guards running_ and callback_

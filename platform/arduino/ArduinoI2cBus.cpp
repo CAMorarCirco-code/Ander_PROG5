@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-namespace bme280 {
+namespace platform {
 
 ArduinoI2cBus::ArduinoI2cBus(TwoWire& wire, uint8_t address) : wire_(wire), address_(address) {}
 
@@ -42,4 +42,4 @@ bool ArduinoI2cBus::write(uint8_t reg, const uint8_t* data, size_t len)
     return wire_.endTransmission() == 0;
 }
 
-} // namespace bme280
+} // namespace platform

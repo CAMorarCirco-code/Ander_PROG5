@@ -64,18 +64,18 @@ int main(int argc, char** argv)
     const std::vector<std::string> topics = {"han/ese/ander/bme280/state", "han/ese/ander/fake/state"};
 
     // --- wiring: the sampler only sees EnvironmentSensor*, the callback only Publisher&
-    auto sampleAndPublish = [&](const std::vector<bme280::EnvironmentSensor*>& sensors,
+    auto sampleAndPublish = [&](const std::vector<hal::EnvironmentSensor*>& sensors,
                                 station::Publisher&                            publisher) -> int {
         // init() on the main thread, before the sampler thread exists; from
         // start() to stop() the sampler is the sensors' only user.
-        for (bme280::EnvironmentSensor* sensor : sensors) {
-            if (sensor->init() != bme280::Error::None) {
+        for (hal::EnvironmentSensor* sensor : sensors) {
+            if (sensor->init() != hal::Error::None) {
                 std::fprintf(stderr, "sensor init failed\n");
                 return 2;
             }
         }
         station::Sampler sampler(sensors, std::chrono::seconds(1));
-        sampler.onMeasurement([&](std::size_t sensorIndex, const bme280::Measurement& m) {
+        sampler.onMeasurement([&](std::size_t sensorIndex, const hal::Measurement& m) {
             // the lambda is the callback; it runs on the sampler thread
             if (!publisher.publish(topics[sensorIndex], station::toJson(m))) {
                 std::fprintf(stderr, "publish failed (broker down?)\n");
@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     };
 
     // --- publisher ------------------------------------------------------------
-    auto withPublisher = [&](const std::vector<bme280::EnvironmentSensor*>& sensors) -> int {
+    auto withPublisher = [&](const std::vector<hal::EnvironmentSensor*>& sensors) -> int {
         if (useConsole) {
             station::ConsolePublisher publisher;
             return sampleAndPublish(sensors, publisher);
@@ -107,8 +107,8 @@ int main(int argc, char** argv)
         return withPublisher({&primary, &second});
     }
     try {
-        bme280::LinuxI2cBus bus(static_cast<uint8_t>(bme280::I2cAddress::Low));   // /dev/i2c-1
-        bme280::LinuxClock  sysClock;   // not `clock`: C already owns that name
+        platform::LinuxI2cBus bus(static_cast<uint8_t>(bme280::I2cAddress::Low));   // /dev/i2c-1
+        platform::LinuxClock  sysClock;   // not `clock`: C already owns that name
         bme280::Bme280      primary(bus, sysClock);
         return withPublisher({&primary, &second});
     } catch (const std::system_error& e) {

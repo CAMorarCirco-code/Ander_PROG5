@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-namespace bme280 {
+namespace platform {
 
 void ArduinoClock::delayUs(uint32_t us)
 {
@@ -11,4 +11,4 @@ void ArduinoClock::delayUs(uint32_t us)
     delayMicroseconds(static_cast<unsigned int>(us % 1000U));
 }
 
-} // namespace bme280
+} // namespace platform

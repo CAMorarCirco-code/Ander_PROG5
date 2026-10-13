@@ -9,7 +9,7 @@
 //    burst write into garbage; here the pairs are decoded.
 // LSP: fully substitutable for Bus.
 
-#include <bme280/Bus.hpp>
+#include <hal/Bus.hpp>
 
 #include <array>
 #include <cstring>
@@ -17,7 +17,7 @@
 
 namespace test {
 
-class MockBus final : public bme280::Bus {
+class MockBus final : public hal::Bus {
 public:
     static constexpr uint8_t kRegChipId    = 0xD0;
     static constexpr uint8_t kChipIdBme280 = 0x60;

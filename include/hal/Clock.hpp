@@ -2,13 +2,13 @@
 
 #include <cstdint>
 
-namespace bme280 {
+namespace hal {
 
 /// Blocking delay the sensor needs between commands and results. Kept apart
 /// from Bus (ISP): a bus does not have to know about time, and a clock can be
 /// shared by several drivers on different buses.
-/// Implementations: ArduinoClock (platform/arduino), LinuxClock
-/// (platform/linux), FakeClock (tests).
+/// Part of the hal package (week 7): shared by all sensors, depends on nothing.
+/// Implementations: platform::ArduinoClock, platform::LinuxClock, FakeClock (tests).
 class Clock {
 public:
     virtual ~Clock() = default;
@@ -22,4 +22,4 @@ protected:
     Clock& operator=(const Clock&) = default;
 };
 
-} // namespace bme280
+} // namespace hal
