@@ -28,9 +28,9 @@ using bme280::Error;
 using bme280::Measurement;
 
 static_assert(!std::is_copy_constructible<station::Sampler>::value, "Sampler owns a thread");
-static_assert(std::is_constructible<station::Sampler, station::EnvironmentSensor&, std::chrono::milliseconds>::value,
+static_assert(std::is_constructible<station::Sampler, bme280::EnvironmentSensor&, std::chrono::milliseconds>::value,
               "Sampler depends on the interface");
-static_assert(std::is_abstract<station::EnvironmentSensor>::value && std::is_abstract<station::Publisher>::value,
+static_assert(std::is_abstract<bme280::EnvironmentSensor>::value && std::is_abstract<station::Publisher>::value,
               "interfaces");
 
 double ms(Clock::duration d)
@@ -70,7 +70,7 @@ struct Recorder {
 
 /// Test sensor: configurable read time and failures, and it detects two
 /// overlapping readForced() calls (the pitfall "sampler + main").
-class ProbeSensor final : public station::EnvironmentSensor {
+class ProbeSensor final : public bme280::EnvironmentSensor {
 public:
     std::chrono::milliseconds readTime{0};
     int                       failEvery = 0;   // every n-th read fails (0: never)

@@ -58,7 +58,7 @@ int main(int argc, char** argv)
     const std::string topic = "han/ese/ander/bme280/state";
 
     // --- wiring: the sampler only sees EnvironmentSensor&, the callback only Publisher&
-    auto sampleAndPublish = [&](station::EnvironmentSensor& sensor, station::Publisher& publisher) -> int {
+    auto sampleAndPublish = [&](bme280::EnvironmentSensor& sensor, station::Publisher& publisher) -> int {
         // init() on the main thread, before the sampler thread exists; from
         // start() to stop() the sampler is the sensor's only user.
         if (sensor.init() != bme280::Error::None) {
@@ -81,7 +81,7 @@ int main(int argc, char** argv)
     };
 
     // --- publisher ------------------------------------------------------------
-    auto withPublisher = [&](station::EnvironmentSensor& sensor) -> int {
+    auto withPublisher = [&](bme280::EnvironmentSensor& sensor) -> int {
         if (useConsole) {
             station::ConsolePublisher publisher;
             return sampleAndPublish(sensor, publisher);

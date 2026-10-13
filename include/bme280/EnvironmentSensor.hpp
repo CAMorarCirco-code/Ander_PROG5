@@ -4,22 +4,23 @@
 // DIP: Sampler depends on this, never on bme280::Bme280 directly;
 // bme280::Bme280 implements it.
 //
-// Includes are relative (like the core headers) so this also compiles in
-// the Arduino IDE, which only puts the library's src/ on the include path.
+// Part of the core package (week 6): the core owns its interfaces, so the
+// core has no dependency on the app layer. Relative include, like the other
+// core headers, so it also compiles in the Arduino IDE.
 
-#include "../bme280/Types.hpp"
+#include "Types.hpp"
 
-namespace station {
+namespace bme280 {
 
 class EnvironmentSensor {
 public:
     virtual ~EnvironmentSensor() = default;
 
     /// Bring the sensor to a state in which readForced() works.
-    virtual bme280::Error init() = 0;
+    virtual Error init() = 0;
 
     /// Take one measurement, block until it is available.
-    virtual bme280::Error readForced(bme280::Measurement& out) = 0;
+    virtual Error readForced(Measurement& out) = 0;
 };
 
-} // namespace station
+} // namespace bme280

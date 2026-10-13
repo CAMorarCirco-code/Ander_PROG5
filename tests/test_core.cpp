@@ -39,9 +39,9 @@ static_assert(!std::is_constructible<bme280::Bme280, bme280::Bus&>::value, "a Cl
 static_assert(!std::is_copy_constructible<bme280::Bme280>::value, "Bme280 is non-copyable");
 static_assert(!std::is_move_constructible<bme280::Bme280>::value, "Bme280 is non-movable");
 // Week 5: Bme280 implements the interface the Sampler depends on (DIP).
-static_assert(std::is_base_of<station::EnvironmentSensor, bme280::Bme280>::value,
+static_assert(std::is_base_of<bme280::EnvironmentSensor, bme280::Bme280>::value,
               "Bme280 is an EnvironmentSensor");
-static_assert(std::has_virtual_destructor<station::EnvironmentSensor>::value, "interface");
+static_assert(std::has_virtual_destructor<bme280::EnvironmentSensor>::value, "interface");
 
 // --- Test doubles ---------------------------------------------------------
 
@@ -180,7 +180,7 @@ void worksThroughEnvironmentSensorInterface()
     MockBus   bus;
     FakeClock clock;
     bme280::Bme280             concrete(bus, clock);
-    station::EnvironmentSensor& sensor = concrete;
+    bme280::EnvironmentSensor& sensor = concrete;
     bme280::Measurement m;
     CHECK(sensor.readForced(m) == bme280::Error::NotInitialised);
     CHECK(sensor.init() == bme280::Error::None);

@@ -7,7 +7,7 @@
 // Single owner of the sensor: while the sampler runs, nobody else may call
 // the sensor (it is not thread-safe and does not need to be).
 
-#include "EnvironmentSensor.hpp"
+#include "../bme280/EnvironmentSensor.hpp"
 
 #include <chrono>
 #include <condition_variable>
@@ -21,7 +21,7 @@ class Sampler {
 public:
     using Callback = std::function<void(const bme280::Measurement&)>;
 
-    Sampler(EnvironmentSensor& sensor, std::chrono::milliseconds period);
+    Sampler(bme280::EnvironmentSensor& sensor, std::chrono::milliseconds period);
     ~Sampler();
 
     Sampler(const Sampler&)            = delete;
@@ -47,7 +47,7 @@ public:
 private:
     void run();
 
-    EnvironmentSensor&        sensor_;
+    bme280::EnvironmentSensor& sensor_;
     std::chrono::milliseconds period_;
 
     mutable std::mutex      mutex_;     // guards running_ and callback_

@@ -6,7 +6,7 @@
 #include "Bus.hpp"
 #include "Clock.hpp"
 #include "Types.hpp"
-#include "../station/EnvironmentSensor.hpp"
+#include "EnvironmentSensor.hpp"
 
 // The wrapper converts integer compensation results (see Bme280.cpp), so the
 // Bosch driver must be built with BME280_32BIT_ENABLE everywhere. CMake
@@ -32,7 +32,7 @@ namespace bme280 {
 ///
 /// Lifetime: `bus` and `clock` are borrowed, not owned. Both must outlive
 /// this object; the caller (sketch / main) creates them first.
-class Bme280 : public station::EnvironmentSensor {
+class Bme280 : public EnvironmentSensor {
 public:
     /// Does not touch hardware; call init() for that.
     Bme280(Bus& bus, Clock& clock);

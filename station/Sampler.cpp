@@ -4,7 +4,7 @@
 
 namespace station {
 
-Sampler::Sampler(EnvironmentSensor& sensor, std::chrono::milliseconds period) : sensor_(sensor), period_(period) {}
+Sampler::Sampler(bme280::EnvironmentSensor& sensor, std::chrono::milliseconds period) : sensor_(sensor), period_(period) {}
 
 Sampler::~Sampler()
 {

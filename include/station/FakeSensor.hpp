@@ -5,11 +5,11 @@
 // whole sampling + MQTT chain run on a laptop.
 // LSP: substitutable for any EnvironmentSensor.
 
-#include "EnvironmentSensor.hpp"
+#include "../bme280/EnvironmentSensor.hpp"
 
 namespace station {
 
-class FakeSensor final : public EnvironmentSensor {
+class FakeSensor final : public bme280::EnvironmentSensor {
 public:
     bme280::Error init() override
     {
