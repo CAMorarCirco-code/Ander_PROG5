@@ -4,6 +4,7 @@
 #include <bme280/Bme280.hpp>
 
 #include "FakeBme280.hpp"
+#include "FakeClock.hpp"
 #include "TestMain.hpp"
 
 #include <type_traits>
@@ -73,11 +74,7 @@ public:
     }
 };
 
-class FakeClock final : public bme280::Clock {
-public:
-    std::vector<uint32_t> delays;
-    void delayUs(uint32_t us) override { delays.push_back(us); }
-};
+using test::FakeClock;   // shared with test_unit (tests/FakeClock.hpp)
 
 // --- Tests ----------------------------------------------------------------
 
@@ -92,8 +89,8 @@ void initSucceedsAndUsesClockForStartupDelay()
     CHECK(sensor.isInitialised());
     CHECK(bus.chip.softResets == 1);
     // Soft reset waits the 2 ms datasheet startup time - through the Clock.
-    CHECK(clock.delays.size() == 1);
-    CHECK(!clock.delays.empty() && clock.delays[0] == 2000U);
+    CHECK(clock.delays().size() == 1);
+    CHECK(!clock.delays().empty() && clock.delays()[0] == 2000U);
 }
 
 void readForcedWaitsMeasurementTimeOnClock()
@@ -102,13 +99,13 @@ void readForcedWaitsMeasurementTimeOnClock()
     FakeClock clock;
     bme280::Bme280 sensor(bus, clock);
     CHECK(sensor.init() == bme280::Error::None);
-    clock.delays.clear();
+    clock.clear();
 
     bme280::Measurement m;
     CHECK(sensor.readForced(m) == bme280::Error::None);
     CHECK(bus.chip.forcedTriggers == 1);
-    CHECK(clock.delays.size() == 1);
-    CHECK(!clock.delays.empty() && clock.delays[0] == sensor.measurementTimeUs());
+    CHECK(clock.delays().size() == 1);
+    CHECK(!clock.delays().empty() && clock.delays()[0] == sensor.measurementTimeUs());
     CHECK(sensor.measurementTimeUs() > 0U);
 
     // Datasheet example values.
@@ -171,7 +168,7 @@ void callsBeforeInitAreRejectedWithoutTouchingHardware()
     CHECK(sensor.setMode(bme280::Mode::Normal) == bme280::Error::NotInitialised);
     CHECK(sensor.configure(bme280::Config{}) == bme280::Error::NotInitialised);
     CHECK(bus.reads == 0 && bus.writes == 0);
-    CHECK(clock.delays.empty());
+    CHECK(clock.delays().empty());
 }
 
 void worksThroughEnvironmentSensorInterface()
@@ -204,7 +201,7 @@ void twoSensorsShareOneClock()
     bme280::Bme280 b(busB, clock);
     CHECK(a.init() == bme280::Error::None);
     CHECK(b.init() == bme280::Error::None);
-    CHECK(clock.delays.size() == 2);
+    CHECK(clock.delays().size() == 2);
     CHECK(busA.chip.softResets == 1 && busB.chip.softResets == 1);
 }
 
