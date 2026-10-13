@@ -14,6 +14,21 @@ enum class Error : uint8_t {
     Unknown           ///< Bosch API returned a code we did not map
 };
 
+/// Name of an Error, for log output. Returns a string literal: no
+/// std::string, no allocation, so it is fine on an MCU.
+inline const char* errorName(Error e)
+{
+    switch (e) {
+        case Error::None:           return "None";
+        case Error::NotInitialised: return "NotInitialised";
+        case Error::BusFailure:     return "BusFailure";
+        case Error::WrongChipId:    return "WrongChipId";
+        case Error::InvalidConfig:  return "InvalidConfig";
+        case Error::Unknown:        return "Unknown";
+    }
+    return "Unknown";
+}
+
 /// I2C address depends on the SDO pin level.
 enum class I2cAddress : uint8_t { Low = 0x76, High = 0x77 };
 

@@ -9,18 +9,6 @@ static bme280::ArduinoI2cBus bus(Wire, static_cast<uint8_t>(bme280::I2cAddress::
 static bme280::ArduinoClock sensorClock;
 static bme280::Bme280 sensor(bus, sensorClock);
 
-static const char* toString(bme280::Error e)
-{
-    switch (e) {
-        case bme280::Error::None:           return "None";
-        case bme280::Error::NotInitialised: return "NotInitialised";
-        case bme280::Error::BusFailure:     return "BusFailure";
-        case bme280::Error::WrongChipId:    return "WrongChipId";
-        case bme280::Error::InvalidConfig:  return "InvalidConfig";
-        default:                            return "Unknown";
-    }
-}
-
 void setup()
 {
     Serial.begin(115200);
@@ -33,7 +21,7 @@ void setup()
     const bme280::Error err = sensor.init();   // default Config: weather monitoring
     if (err != bme280::Error::None) {
         Serial.print("init failed: ");
-        Serial.println(toString(err));
+        Serial.println(bme280::errorName(err));
         while (true) {}
     }
     Serial.println("BME280 ready");
@@ -53,7 +41,7 @@ void loop()
         Serial.println(" %");
     } else {
         Serial.print("read failed: ");
-        Serial.println(toString(err));
+        Serial.println(bme280::errorName(err));
     }
     delay(1000);
 }

@@ -33,19 +33,6 @@ void waitMs(bme280::Clock& clock, unsigned long ms)
     }
 }
 
-const char* toString(bme280::Error e)
-{
-    switch (e) {
-        case bme280::Error::None:           return "None";
-        case bme280::Error::NotInitialised: return "NotInitialised";
-        case bme280::Error::BusFailure:     return "BusFailure";
-        case bme280::Error::WrongChipId:    return "WrongChipId";
-        case bme280::Error::InvalidConfig:  return "InvalidConfig";
-        case bme280::Error::Unknown:        return "Unknown";
-    }
-    return "Unknown";
-}
-
 bool parseUnsigned(const char* text, unsigned long max, unsigned long& out)
 {
     char* end = nullptr;
@@ -97,7 +84,7 @@ int main(int argc, char** argv)
 
         const bme280::Error err = sensor.init();
         if (err != bme280::Error::None) {
-            std::fprintf(stderr, "init failed on %s @ 0x%02lx: %s\n", device.c_str(), address, toString(err));
+            std::fprintf(stderr, "init failed on %s @ 0x%02lx: %s\n", device.c_str(), address, bme280::errorName(err));
             return 1;
         }
         std::printf("BME280 ready on %s @ 0x%02lx, one measurement takes %u us\n", device.c_str(), address,
@@ -111,7 +98,7 @@ int main(int argc, char** argv)
             bme280::Measurement m;
             const bme280::Error readErr = sensor.readForced(m);
             if (readErr != bme280::Error::None) {
-                std::fprintf(stderr, "read failed: %s\n", toString(readErr));
+                std::fprintf(stderr, "read failed: %s\n", bme280::errorName(readErr));
                 result = 2;
                 continue;
             }
