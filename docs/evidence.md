@@ -1,65 +1,128 @@
 # Hardware evidence and provenance
 
-This page separates three kinds of result: tests run **against this repository**, hardware results
-recorded in **Liv's repository** (Gabrielle Olivia Handoko, `GabrielleOlivia/PROG5_GO.Handoko`)
-during the lab session we did together, and tests that are **still missing**.
-
-## Sensor choice
+## Sensor choice and accepted lab evidence
 
 The course overview allows another sensor: "The BME280 is the sensor we use as the concrete
 example; a BMP280 or another I2C sensor works just as well"
 ([`Prog5/Assignments/README.md`](https://github.com/AEAEmbedded/ESE_PROG/blob/911be1bae17dc9bafa61efd6c281d667600658f7/Prog5/Assignments/README.md),
-line 5). According to the student, the teacher also confirmed that the alternative setup from the
-lab (MPXV5010GP pressure sensor read through an MCP3426 ADC at I2C address `0x68`) is acceptable.
+line 5).
 
-This library implements the BME280. The sensor flexibility means a non-BME280 sensor is not a
-problem in itself. It does **not** make another library's output the output of this one: the
-hand-ins ask for "Serial output of the example sketch" (week 3), "the terminal output of the
-smoke test" (week 4), a `mosquitto_sub` capture of the station (week 5) and "the Pi still
-publishes" (week 7), and this repository's code cannot read the MCP3426.
+The lab measurements were carried out together with Gabrielle Olivia Handoko (Liv) on her
+setup: an MPXV5010GP pressure sensor read through an MCP3426 ADC at I2C address `0x68`. The
+teacher confirmed (as reported by Ander) that this alternative sensor setup is accepted and that
+Liv's documented hardware measurements are the hardware evidence for this lab.
 
-## Liv's recorded results
+**Attribution.** All hardware results below were recorded in Liv's repository,
+[`GabrielleOlivia/PROG5_GO.Handoko`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko)
+(links pinned to commit `0ddac17`), and were produced by **Liv's library** (`week3/pressurelib`),
+not by the code in this repository. The excerpts are quoted unchanged; the original files are not
+copied here. All results from this repository's own code are software results, listed in the
+[README](../README.md) verification tables.
 
-All files are in `GabrielleOlivia/PROG5_GO.Handoko`, branch `main` at `0ddac17`. They were produced
-by **Liv's own library** (`week3/pressurelib`, sensor `MCP3426`), not by this repository's code.
+## Week 3: Serial output on the SAMD21
 
-| File | Added in | Date | Platform | Source code that ran | What it shows |
-|---|---|---|---|---|---|
-| `week3/pressurelib/evidence/arduino-serial-20261013.txt` (procedure: `week3/pressurelib/docs/BOARD_TEST.md`) | `100a7e4` | 13 Oct 2026 | ModularSim SAMD21 SensorHub (Feather M0 Express variant), PlatformIO, COM3 115200 | Liv's `PressureRead` sketch; flashed commit **not recorded**, with a local init-retry change | 85 CSV rows (raw counts, ADC voltage): stable at rest, response to syringe pressure, 7 saturated samples. Pasted excerpts, not a full session |
-| `week4/evidence/pi-smoke-test.txt` (procedure: `week4/PI_TEST.md`) | `2aab8f9` | 13 Oct 2026 | Raspberry Pi 4B Rev 1.5, Debian 13 ARM64, kernel `6.18.50+rpt-rpi-v8`, `/dev/i2c-1` | Liv's `pressure_read`, commit `eade45b` | 37 samples at 1 s from `0x68`, no errors, clean Ctrl+C (`script` recording) |
-| `week5/evidence/pi-mqtt-real.txt` | `f74b235` | 13 Oct 2026 | same Pi, Mosquitto 2.0.21 | Liv's `pressure_station`, commit `eade45b` | 6 messages: 3 real `0x68` readings on `han/ese/gabrielle-olivia-handoko/mcp3426/state`, 3 from a fake second sensor |
-| `week5/evidence/pi-mqtt-simulated.txt` | `f74b235` | 13 Oct 2026 | same Pi | same | 6 messages from two simulated sensors |
-| `week7/evidence/pi-ctest.txt`, `pi-week7-doctest.txt` | `0ddac17` | 13 Oct 2026 | same Pi, GCC 14.2.0, CMake 3.31.6 | Liv's commit `1d1cf9f` | Her mock-based tests on ARM64: 3/3 suites, 16/16 doctest cases. No sensor and no broker involved |
-| `week5/evidence/mosquitto-sub-fake.txt`, `week6/evidence/*`, `week7/evidence/mosquitto-sub-two-sensors.txt` | various | 8-13 Oct 2026 | x86-64 host | Liv's code | Host runs with simulated data; not hardware evidence |
+| | |
+|---|---|
+| Evidence | [`week3/pressurelib/evidence/arduino-serial-20261013.txt`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week3/pressurelib/evidence/arduino-serial-20261013.txt), procedure and setup in [`week3/pressurelib/docs/BOARD_TEST.md`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week3/pressurelib/docs/BOARD_TEST.md) |
+| Added in | `100a7e4`, 13 Oct 2026 |
+| Platform | ModularSim SAMD21 SensorHub (Feather M0 Express build variant), PlatformIO, COM3 at 115200 baud |
+| Code | Liv's `PressureRead` example; the flashed commit was not recorded (stated in the file) |
+| Requirement | "Serial output of the example sketch": one measurement per second over Serial |
+| Shows | 85 rows at 1 s intervals with no error flag: stable at rest, a clear response to syringe pressure, recovery afterwards |
 
-**What these results establish for this repository.** They are evidence for Liv's library. For
-this library they only establish the lab environment:
-* the lab Pi 4B has I2C enabled at `/dev/i2c-1`, and a device on the shared module answers at `0x68`;
-* Mosquitto 2.0.21 broker and `mosquitto_sub` run on that Pi;
-* the Pi's toolchain is GCC 14.2.0 / CMake 3.31.6, and CMake's `FetchContent` can download doctest there.
+```text
+# t_ms,raw_counts,adc_input_V,at_adc_limit,error
+# Resting readings (14 rows)
+11602,2518,0.157375,0,0
+12602,2517,0.157313,0,0
+...
+# Manual syringe input / recovery (71 rows)
+...
+241602,3174,0.198375,0,0
+242602,13992,0.874500,0,0
+243602,3702,0.231375,0,0
+244602,2371,0.148188,0,0
+```
 
-They do not show that this repository's `ArduinoI2cBus`, `LinuxI2cBus`, `Bme280`, `Sampler` or
-`MqttPublisher` work on hardware. None of these files is copied into this repository.
+## Week 4: smoke test on the Raspberry Pi
 
-## Run against this repository (software only)
+| | |
+|---|---|
+| Evidence | [`week4/evidence/pi-smoke-test.txt`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week4/evidence/pi-smoke-test.txt) (unedited `script` recording), procedure in [`week4/PI_TEST.md`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week4/PI_TEST.md) |
+| Added in | `2aab8f9`, recorded 13 Oct 2026 16:04-16:05 (+02:00) |
+| Platform | Raspberry Pi 4B Rev 1.5 (4 GB), Debian 13 Trixie ARM64, kernel `6.18.50+rpt-rpi-v8`, `/dev/i2c-1` |
+| Code | Liv's `pressure_read`, her commit `eade45b` |
+| Requirement | "the terminal output of the smoke test on the Pi": reads once per second, exits cleanly on Ctrl-C |
+| Shows | 37 consecutive samples from the device at `0x68` over Linux `i2c-dev`, no errors, clean Ctrl+C, exit code 0 |
 
-See the verification tables in the [README](../README.md): host GCC 13.3 / 14.2, Clang, CMake 3.28
-and 4.4, sanitizers, valgrind, aarch64/armhf under qemu, and an Arduino compile for
-`nano_33_iot`. No hardware was used.
+```text
+Script started on 2026-10-13 16:04:47+02:00 [COMMAND="./build/pressure_read /dev/i2c-1 0x68" ...]
+# MCP3426, CH1, 16-bit, gain x1; raw counts and ADC input voltage
+# device=/dev/i2c-1, address=0x68
+t_ms,raw_counts,adc_input_V,at_adc_limit,error
+101,3637,0.227313,0,0
+1101,3637,0.227313,0,0
+2101,3639,0.227438,0,0
+...
+36101,3639,0.227438,0,0
+^C# Stopped; I2C connection will close.
 
-## Still missing, and the smallest test that closes each
+Script done on 2026-10-13 16:05:24+02:00 [COMMAND_EXIT_CODE="0"]
+```
 
-Run on the lab Pi, from a clone of the `week7` branch. Steps 1-3 need **no BME280**.
+## Week 5: `mosquitto_sub` capture on the Pi
 
-| # | Command | Shows | Closes |
-|---|---|---|---|
-| 1 | `cmake -S . -B build -DBME280_WARNINGS_AS_ERRORS=ON && cmake --build build -j && ctest --test-dir build` (before starting the mosquitto service) | this code builds and passes 9/9 on the real Pi | Week 7 "`ctest` green", natively on the Pi |
-| 2 | `sudo systemctl start mosquitto`; `./build/examples/station/station_main --fake &`; `mosquitto_sub -h localhost -t 'han/ese/#' -v -C 6` | sampler thread, both publishers and the broker on the Pi; data from `FakeSensor` | Week 7 "the Pi still publishes" (with simulated values: say so) |
-| 3 | `./build/examples/rpi/bme280_rpi_smoke /dev/i2c-1 0x68 1000 1` with the MCP3426 module attached | `LinuxI2cBus` completes a real I2C transaction; expected result `init` fails with `WrongChipId` (an MCP3426 is not a BME280), not with an I2C error | part of Week 4 (real bus). Note: the register-pointer byte `0xD0` is written to the MCP3426's configuration register; power-cycle the module afterwards |
-| 4 | with a BME280 module: `i2cdetect -y 1`, `bme280_rpi_smoke /dev/i2c-1 0x76 1000 10`, then `station_main` + `mosquitto_sub` | real readings through this library | Weeks 4 and 5 with real data |
-| 5 | with a BME280 on a SAMD21: upload `ReadEverySecond`, Serial Monitor 115200 | Serial output of this example | Week 3 |
+| | |
+|---|---|
+| Evidence | [`week5/evidence/pi-mqtt-real.txt`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week5/evidence/pi-mqtt-real.txt) and [`pi-mqtt-simulated.txt`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week5/evidence/pi-mqtt-simulated.txt); run described in [`week5/README.md`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week5/README.md) |
+| Added in | `f74b235`, 13 Oct 2026 |
+| Platform | same Raspberry Pi 4B, local Mosquitto 2.0.21 broker and `mosquitto_sub` |
+| Code | Liv's `pressure_station`, her commit `eade45b` (already with the two-sensor extension) |
+| Requirement | sampling thread -> callback -> JSON -> MQTT on the Pi, checked with `mosquitto_sub -t 'han/ese/#' -v` |
+| Shows | real sensor readings (`"simulated":false`) and a second, fake sensor published as JSON on their own topics, through a real broker on the Pi |
 
-Steps 4 and 5 need a BME280 (or BMP280) module. Without one, this library's real-sensor hand-ins
-for weeks 3-5 cannot be produced; the alternative is adding a driver for the lab's MCP3426 to this
-library, which is a design change (see finding 6 in the [refactor report](refactor_report.md):
-`Bus::read` always writes a register pointer, and the MCP3426 has none).
+```text
+han/ese/gabrielle-olivia-handoko/mcp3426/state {"raw_counts":3609,"adc_input_V":0.225563,"at_adc_limit":false,"simulated":false}
+han/ese/gabrielle-olivia-handoko/mcp3426/simulated/secondary {"raw_counts":10000,"adc_input_V":0.625000,"at_adc_limit":false,"simulated":true}
+han/ese/gabrielle-olivia-handoko/mcp3426/state {"raw_counts":3614,"adc_input_V":0.225875,"at_adc_limit":false,"simulated":false}
+```
+
+This library's own topic and payload are `han/ese/ander/bme280/state` with
+`{"t":…,"p":…,"h":…}`; the README's Week 5 capture shows them, from a host run with `--fake`.
+
+## Week 6
+
+No hardware evidence is required. The design is checked in software (README, Week 6).
+
+## Week 7: tests on the Pi
+
+| | |
+|---|---|
+| Evidence | [`week7/evidence/pi-ctest.txt`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week7/evidence/pi-ctest.txt), [`week7/evidence/pi-week7-doctest.txt`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week7/evidence/pi-week7-doctest.txt) |
+| Added in | `0ddac17`, 13 Oct 2026 |
+| Platform | same Raspberry Pi 4B, Debian 13 ARM64, GCC 14.2.0, CMake 3.31.6, doctest 2.4.11 |
+| Code | Liv's commit `1d1cf9f` |
+| Requirement | doctest suite runs on the target; the Pi publishing is the Week 5 capture above |
+| Shows | 3/3 CTest suites and 16/16 doctest cases (124/124 assertions) passed on ARM64 hardware |
+
+```text
+1/3 Test #1: core .............................   Passed    0.01 sec
+2/3 Test #2: station ..........................   Passed    0.40 sec
+3/3 Test #3: assignment7_unit .................   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 3
+```
+
+This repository's own Week 7 suite (9 CTest suites, including the doctest `unit` suite) was run
+on the host with GCC 13.3 and GCC 14.2 (the Pi's compiler version), CMake 3.28 and 4.4, and
+under `qemu-aarch64`; see the README.
+
+## Optional re-run with this repository's code
+
+Not required for the hand-in. On the same Pi, from a clone of this repository:
+
+```bash
+cmake -S . -B build -DBME280_WARNINGS_AS_ERRORS=ON && cmake --build build -j && ctest --test-dir build
+./build/examples/station/station_main --fake &      # FakeSensor values, real broker
+mosquitto_sub -h localhost -t 'han/ese/#' -v -C 6
+```
