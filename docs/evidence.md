@@ -1,23 +1,37 @@
 # Hardware evidence and provenance
 
-## Sensor choice and accepted lab evidence
+## Shared lab work
 
+**Collaborative hardware measurements.** Ander and Liv (Gabrielle Olivia Handoko) carried out the
+Prog5 lab measurements together, on Liv's computer and her physical hardware setup. We chose to use
+one working setup rather than duplicate computers and hardware, so the original measurement
+records are kept in Liv's repository,
+[`GabrielleOlivia/PROG5_GO.Handoko`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko). The
+measurements are credited to our shared lab work. That the files are stored in Liv's repository
+says where they are kept, not who took part.
+
+**Sensor setup.** An MPXV5010GP pressure sensor read through an MCP3426 ADC at I2C address `0x68`.
 The course overview allows another sensor: "The BME280 is the sensor we use as the concrete
 example; a BMP280 or another I2C sensor works just as well"
 ([`Prog5/Assignments/README.md`](https://github.com/AEAEmbedded/ESE_PROG/blob/911be1bae17dc9bafa61efd6c281d667600658f7/Prog5/Assignments/README.md),
-line 5).
+line 5). The teacher accepted this setup and these measurements as the hardware evidence for this
+lab (as reported by Ander).
 
-The lab measurements were carried out together with Gabrielle Olivia Handoko (Liv) on her
-setup: an MPXV5010GP pressure sensor read through an MCP3426 ADC at I2C address `0x68`. The
-teacher confirmed (as reported by Ander) that this alternative sensor setup is accepted and that
-Liv's documented hardware measurements are the hardware evidence for this lab.
+**Provenance.** Shared lab work, repository ownership, Git authorship and the code that ran are
+different things:
 
-**Attribution.** All hardware results below were recorded in Liv's repository,
-[`GabrielleOlivia/PROG5_GO.Handoko`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko)
-(links pinned to commit `0ddac17`), and were produced by **Liv's library** (`week3/pressurelib`),
-not by the code in this repository. The excerpts are quoted unchanged; the original files are not
-copied here. All results from this repository's own code are software results, listed in the
-[README](../README.md) verification tables.
+| | Shared lab measurements | This repository |
+|---|---|---|
+| Who did the work | Ander and Liv, together | - |
+| Repository owner | Liv | Ander |
+| Where the records are | Liv's repository (links below, pinned to commit `0ddac17`) | here |
+| Code that ran | **Liv's library** (`week3/pressurelib`), at the commits named per week | this BME280 library |
+| Git authorship | commits by `GabrielleOlivia` | commits authored as `Claude` (AI coding assistant), see `git log` |
+| Kind of test | real SAMD21 and Raspberry Pi 4B hardware | host builds, mocks, simulated sensors, qemu, Arduino compile |
+
+The readings below were not produced by this repository's BME280 code. The excerpts are quoted
+unchanged; the original files are not copied here. The results of this repository's own code are
+in the [README](../README.md) verification tables.
 
 ## Week 3: Serial output on the SAMD21
 
@@ -102,7 +116,7 @@ No hardware evidence is required. The design is checked in software (README, Wee
 | Added in | `0ddac17`, 13 Oct 2026 |
 | Platform | same Raspberry Pi 4B, Debian 13 ARM64, GCC 14.2.0, CMake 3.31.6, doctest 2.4.11 |
 | Code | Liv's commit `1d1cf9f` |
-| Requirement | doctest suite runs on the target; the Pi publishing is the Week 5 capture above |
+| Requirement | the test suite runs on the target; "the Pi still publishes" is covered by the Week 5 Pi capture above, recorded with Liv's two-sensor station (commit `eade45b`) |
 | Shows | 3/3 CTest suites and 16/16 doctest cases (124/124 assertions) passed on ARM64 hardware |
 
 ```text

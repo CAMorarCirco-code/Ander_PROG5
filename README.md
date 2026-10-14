@@ -13,16 +13,18 @@ and one polymorphism step: the station samples a collection of sensors through
 refactor ([`docs/refactor_report.md`](docs/refactor_report.md)), and the shared abstractions moved
 out of the BME280 package into their own package, `hal`.
 
-Earlier hand-ins are preserved in the tags `v0.3-arduino` (Week 3), `v0.4-pi` (Week 4) and
-`v0.5-mqtt` (Week 5). Weeks 6 and 7 are on the branches `week6` and `week7`; their tags
-(`v0.6-design`, `v1.0`) are not created yet.
+Each hand-in is tagged: `v0.3-arduino` (Week 3), `v0.4-pi` (Week 4), `v0.5-mqtt` (Week 5),
+`v0.6-design` (Week 6) and `v1.0` (Week 7). `week7` is the default branch.
 
-**Hardware evidence.** The course allows another I2C sensor. The lab measurements were done
-together with Liv (Gabrielle Olivia Handoko) on her MCP3426 + MPXV5010GP setup, which the teacher
-accepted as the hardware evidence for this lab. Those results were recorded in her repository with
-her library; [`docs/evidence.md`](docs/evidence.md) quotes them per week with source file, commit,
-platform and date. Every other result in this README comes from this repository's code, in
-software.
+**Hardware measurements (shared lab work).** Ander and Liv (Gabrielle Olivia Handoko) carried out
+the Prog5 lab measurements together, on Liv's computer and her hardware setup (an MPXV5010GP
+pressure sensor read through an MCP3426 ADC; the course allows another I2C sensor). We used one
+working setup instead of duplicating computers and hardware, so the original measurement records
+are kept in Liv's repository. They were produced with Liv's library, not with this repository's
+BME280 code. The teacher accepted this setup and these measurements as the hardware evidence for
+the lab (as reported by Ander). [`docs/evidence.md`](docs/evidence.md) quotes them per week with
+source file, commit, platform and date. Every other result in this README was produced by this
+repository's code, in software (host builds, mocks, simulated sensors, qemu, Arduino compile).
 
 ## Structure
 
@@ -42,11 +44,13 @@ examples/arduino/   ReadEverySecond, CustomConfig            (Arduino sketches)
 examples/rpi/       smoke_test.cpp -> bme280_rpi_smoke       (Raspberry Pi)
 examples/station/   station_main.cpp -> station_main         (week 5 composition root)
 tests/              host tests: core with mocks, Arduino bus with a fake Wire, Linux bus with a
-                    fake ioctl, Linux platform
+                    fake ioctl, Linux platform, station, MQTT (real broker), doctest unit
+                    suite, package-dependency check
 cmake/              cross-compile toolchains for Raspberry Pi OS (aarch64, armhf)
 docs/               week4_class_diagram.*, week5_sequence_diagram.*,
                     week6/ (class, package and two sequence diagrams; .puml + .svg + .png),
-                    week7/ (package diagrams before/after the hal refactor), refactor_report.md
+                    week7/ (package diagrams before/after the hal refactor), refactor_report.md,
+                    evidence.md (shared lab hardware measurements and their provenance)
 CMakeLists.txt      core + Linux platform + station (week 5) + examples + tests
 library.properties  Arduino library metadata
 ```
@@ -152,20 +156,21 @@ mosquitto 2.0.18); all builds with `-Wall -Wextra -Wpedantic -Werror`:
 | GCC 14.2 (the compiler of Debian 13 / Raspberry Pi OS Trixie), fresh clone, x86-64 | 0 warnings; 9/9. Same compiler on `week6` (7/7) and `week5` (7/7) |
 | CMake 4.4.4, fresh clone (CMake 4 rejects doctest's `cmake_minimum_required(3.0)` unless `CMAKE_POLICY_VERSION_MINIMUM` is set, which `tests/CMakeLists.txt` does) | configures and builds; 9/9 |
 
-**Hardware evidence (accepted lab evidence, Liv's setup):** the Week 7 doctest/CTest run on the
-Raspberry Pi 4B and the Pi MQTT capture; see [`docs/evidence.md`](docs/evidence.md#week-7-tests-on-the-pi).
-The Arduino example of this repository still compiles (table above).
+**Hardware measurements (shared lab work, Liv's setup and library):** the CTest/doctest run on the
+Raspberry Pi 4B and the Pi MQTT capture (recorded with Liv's two-sensor station); see
+[`docs/evidence.md`](docs/evidence.md#week-7-tests-on-the-pi). This repository's own Week 7 suite
+ran on the host and under qemu (table above), and its Arduino example still compiles.
 
 ## Week 6: design on paper, polymorphism in code
 
-*This section describes the Week 6 state (`bda90c0`, intended tag `v0.6-design`). Week 7 moved
+*This section describes the Week 6 hand-in (`v0.6-design`, commit `bda90c0`). Week 7 moved
 `Bus`, `Clock`, `EnvironmentSensor`, `Error` and `Measurement` into the new `hal` package
 (`include/hal/`) and the platform classes into namespace `platform`; see "Week 7" above.*
 
 ### Diagrams
 
 All four are PlantUML source **and** rendered image in [`docs/week6/`](docs/week6/), and match the
-code on this branch.
+code at `v0.6-design` (the Week 7 package changes are drawn in [`docs/week7/`](docs/week7/)).
 
 | Diagram | Source | Image |
 |---|---|---|
@@ -284,7 +289,7 @@ sketches still use a single sensor (the assignment makes `std::array` there opti
   * a null entry is skipped and indices keep their meaning
 * `station_e2e` expects both topics, both on the console and through `mosquitto_sub -t 'han/ese/#'`.
 
-Run on this branch on an x86-64 Linux host (GCC 13.3, Clang 18.1.3, mosquitto 2.0.18); all builds
+Run on the `week6` branch (`bda90c0`) on an x86-64 Linux host (GCC 13.3, Clang 18.1.3, mosquitto 2.0.18); all builds
 with `-Wall -Wextra -Wpedantic -Werror`:
 
 | Check | Result |
@@ -528,8 +533,8 @@ Checked in software on an x86-64 Linux host (Ubuntu 24.04, GCC 13.3, Clang 18.1.
 | Week 4 tests and `bme280_rpi_smoke` | unchanged results |
 | Tests catch the starter's bugs (checked by re-introducing each) | drift -> `periodDoesNotDriftWithReadTime` fails; no notify in `stop()` -> `stopDoesNotWaitOutThePeriod` fails; starter connect order -> `brokerDownAtStartThenComesUp` fails |
 
-**Hardware evidence (accepted lab evidence, Liv's setup):** `mosquitto_sub` capture on the
-Raspberry Pi 4B, 13 Oct 2026, real sensor readings plus a fake second sensor through the Pi's
+**Hardware measurements (shared lab work, Liv's setup and library):** `mosquitto_sub` capture on
+the Raspberry Pi 4B, 13 Oct 2026: real sensor readings plus a fake second sensor through the Pi's
 Mosquitto broker; see [`docs/evidence.md`](docs/evidence.md#week-5-mosquitto_sub-capture-on-the-pi).
 The capture above is this repository's own station (`--fake`, laptop).
 
@@ -704,7 +709,7 @@ outlive it (locals are destroyed in reverse order); the sensor only borrows them
 | Target             | Contents                                   | Built when                     |
 |--------------------|--------------------------------------------|--------------------------------|
 | `bme280_bosch`     | vendored Bosch SensorAPI (C99)             | always                         |
-| `bme280_core`      | `Bme280` + `Bus`/`Clock` (C++17)           | always                         |
+| `bme280_core`      | `Bme280` (C++17), links `hal`              | always                         |
 | `bme280_linux`     | `LinuxI2cBus`, `LinuxClock`                | `BME280_BUILD_LINUX` (default: on when targeting Linux) |
 | `bme280_rpi_smoke` | Raspberry Pi smoke test                    | `BME280_BUILD_EXAMPLES` + Linux |
 | `bme280_station`   | `Sampler` (+ header-only `Publisher`, `ConsolePublisher`, `FakeSensor`, `toJson`) | `BME280_BUILD_STATION` (default on) |
@@ -781,8 +786,8 @@ does not ship `<cstdint>`/`<cstddef>`, which the core headers use.
 arduino-cli compile -b arduino:samd:nano_33_iot --library . examples/arduino/ReadEverySecond
 ```
 
-Serial output (Week 3 hand-in): the accepted lab evidence is the SAMD21 SensorHub run on Liv's
-setup, 13 Oct 2026, quoted in [`docs/evidence.md`](docs/evidence.md#week-3-serial-output-on-the-samd21).
+Serial output (Week 3 hand-in): the SAMD21 SensorHub run that Ander and Liv did together on Liv's
+setup (with Liv's library), 13 Oct 2026, quoted in [`docs/evidence.md`](docs/evidence.md#week-3-serial-output-on-the-samd21).
 
 #### Arduino IDE build glue
 
@@ -801,7 +806,9 @@ IDE never sees it. The core itself does not include any glue file.
 
 ## Tests
 
-All tests are plain executables (a tiny harness in `tests/TestMain.hpp`, no external framework).
+The suites below are plain executables (a tiny harness in `tests/TestMain.hpp`, no external
+framework). `test_unit` uses doctest (see "Week 7"), `station`, `mqtt_publisher` and `station_e2e`
+are described under "Week 5", and `dependencies` under "Week 7".
 
 * `test_core` - the core with `MockBus` + `FakeClock`. The `MockBus` is backed by `FakeBme280`,
   a register-level model of the chip loaded with the calibration example from the Bosch datasheet
@@ -862,7 +869,7 @@ sketches compile and link against the real SAMD core headers, but it is **not** 
 `arduino-cli compile -b arduino:samd:nano_33_iot --library . examples/arduino/ReadEverySecond`
 on a machine with the SAMD core installed to confirm.
 
-**Hardware evidence (accepted lab evidence, Liv's setup):**
+**Hardware measurements (shared lab work, Liv's setup and library):**
 
 * Smoke test on the Raspberry Pi 4B over `/dev/i2c-1`, 13 Oct 2026: 37 samples at 1 s, clean
   Ctrl+C; see [`docs/evidence.md`](docs/evidence.md#week-4-smoke-test-on-the-raspberry-pi).

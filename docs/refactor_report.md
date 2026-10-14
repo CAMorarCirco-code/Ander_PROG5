@@ -3,9 +3,9 @@
 Review of the library and station **at the end of week 6** against DRY, KISS, SOLID, loose
 coupling / strong cohesion and the lifecycle checklist of assignment 7/8, and what was changed.
 
-**Reviewed state.** The week-6 hand-in commit is `bda90c0` (branch `week6`), intended to become
-tag `v0.6-design`. That tag did not exist yet when this review was done, so every `file:line`
-below refers to `bda90c0` (`git show bda90c0:<file>`).
+**Reviewed state.** The week-6 hand-in, tag `v0.6-design` = commit `bda90c0` (branch `week6`).
+The review was done before the tag was created, so every `file:line` below is given against the
+commit, `bda90c0` (`git show v0.6-design:<file>` shows the same files).
 
 ## Findings
 
