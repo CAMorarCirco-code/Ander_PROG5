@@ -22,7 +22,7 @@ different things:
 
 | | Shared lab measurements | This repository |
 |---|---|---|
-| Who did the work | Ander and Liv, together | Ander (author), with an AI coding assistant |
+| Who did the work | Ander and Liv, together | Ander (author: requirements, design decisions, review, own build and test run), with an AI coding assistant writing most of the code |
 | Repository owner | Liv | Ander |
 | Where the records are | Liv's repository (links below, pinned to commit `0ddac17`) | here |
 | Code that ran | **Liv's library** (`week3/pressurelib`), at the commits named per week | this BME280 library |

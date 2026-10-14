@@ -1,9 +1,10 @@
 # Ander_PROG5 - BME280 sensor library (Prog 5)
 
-**Author:** Ander ([CAMorarCirco-code](https://github.com/CAMorarCirco-code)). The code and documentation
-were written with the help of an AI coding assistant (Claude), which is why the Git commits are
-recorded under its name. The hardware measurements and tests were done together with Liv (see
-below).
+**Author:** Ander ([CAMorarCirco-code](https://github.com/CAMorarCirco-code)). Developed with the help
+of an AI coding assistant (Claude): Ander set the requirements and design decisions for each week,
+reviewed the changes, and ran the build and tests himself. The assistant wrote most of the code and
+documentation, which is why the Git commits carry its name. The hardware measurements and tests
+were done together with Liv (see below).
 
 C++ library for the Bosch BME280 (temperature, pressure, humidity). The Bosch BME280 SensorAPI
 is wrapped in a class that talks to two abstractions, `Bus` and `Clock`, so the sensor code does
