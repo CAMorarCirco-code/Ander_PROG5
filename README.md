@@ -17,6 +17,11 @@ Earlier hand-ins are preserved in the tags `v0.3-arduino` (Week 3), `v0.4-pi` (W
 `v0.5-mqtt` (Week 5). Weeks 6 and 7 are on the branches `week6` and `week7`; their tags
 (`v0.6-design`, `v1.0`) are not created yet.
 
+**Hardware evidence.** No result in this README comes from hardware yet. The course allows another
+I2C sensor; the lab setup used with Liv (MCP3426 ADC + MPXV5010GP) and what her recorded results
+do and do not show for this library are in [`docs/evidence.md`](docs/evidence.md), with the
+smallest tests still needed.
+
 ## Structure
 
 ```
@@ -150,6 +155,8 @@ has **not** been checked. No Raspberry Pi with a BME280 was available; the stati
 with `--fake` on the laptop. The Arduino example has been compiled, not run.
 
 ### Hardware checklist: one session closes every week
+
+See [`docs/evidence.md`](docs/evidence.md) for what can be checked without a BME280: step 3 needs no sensor, and step 4 runs with `station_main --fake` (simulated values: say so).
 
 The code paths these tests exercise are the same in `week7` as in the earlier tags (the week-7
 refactor only renamed namespaces), so one session on the final branch covers all weeks. Paste each
