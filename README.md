@@ -1,5 +1,10 @@
 # Ander_PROG5 - BME280 sensor library (Prog 5)
 
+**Author:** Ander ([CAMorarCirco-code](https://github.com/CAMorarCirco-code)). The code and documentation
+were written with the help of an AI coding assistant (Claude), which is why the Git commits are
+recorded under its name. The hardware measurements and tests were done together with Liv (see
+below).
+
 C++ library for the Bosch BME280 (temperature, pressure, humidity). The Bosch BME280 SensorAPI
 is wrapped in a class that talks to two abstractions, `Bus` and `Clock`, so the sensor code does
 not depend on any particular board. The same core runs on Arduino (Week 3) and on a Raspberry Pi
@@ -16,8 +21,8 @@ out of the BME280 package into their own package, `hal`.
 Each hand-in is tagged: `v0.3-arduino` (Week 3), `v0.4-pi` (Week 4), `v0.5-mqtt` (Week 5),
 `v0.6-design` (Week 6) and `v1.0` (Week 7). `week7` is the default branch.
 
-**Hardware measurements (shared lab work).** Ander and Liv (Gabrielle Olivia Handoko) carried out
-the Prog5 lab measurements together, on Liv's computer and her hardware setup (an MPXV5010GP
+**Hardware measurements and tests (shared lab work).** Ander and Liv (Gabrielle Olivia Handoko)
+carried out the Prog5 lab measurements and hardware tests together, on Liv's computer and her hardware setup (an MPXV5010GP
 pressure sensor read through an MCP3426 ADC; the course allows another I2C sensor). We used one
 working setup instead of duplicating computers and hardware, so the original measurement records
 are kept in Liv's repository. They were produced with Liv's library, not with this repository's

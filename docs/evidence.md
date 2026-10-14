@@ -2,12 +2,12 @@
 
 ## Shared lab work
 
-**Collaborative hardware measurements.** Ander and Liv (Gabrielle Olivia Handoko) carried out the
-Prog5 lab measurements together, on Liv's computer and her physical hardware setup. We chose to use
+**Collaborative hardware measurements and tests.** Ander and Liv (Gabrielle Olivia Handoko) carried
+out the Prog5 lab measurements and hardware tests together, on Liv's computer and her physical hardware setup. We chose to use
 one working setup rather than duplicate computers and hardware, so the original measurement
 records are kept in Liv's repository,
 [`GabrielleOlivia/PROG5_GO.Handoko`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko). The
-measurements are credited to our shared lab work. That the files are stored in Liv's repository
+measurements and tests are credited to our shared lab work. That the files are stored in Liv's repository
 says where they are kept, not who took part.
 
 **Sensor setup.** An MPXV5010GP pressure sensor read through an MCP3426 ADC at I2C address `0x68`.
@@ -22,11 +22,11 @@ different things:
 
 | | Shared lab measurements | This repository |
 |---|---|---|
-| Who did the work | Ander and Liv, together | - |
+| Who did the work | Ander and Liv, together | Ander (author), with an AI coding assistant |
 | Repository owner | Liv | Ander |
 | Where the records are | Liv's repository (links below, pinned to commit `0ddac17`) | here |
 | Code that ran | **Liv's library** (`week3/pressurelib`), at the commits named per week | this BME280 library |
-| Git authorship | commits by `GabrielleOlivia` | commits authored as `Claude` (AI coding assistant), see `git log` |
+| Git authorship | commits by `GabrielleOlivia` | commits recorded under the assistant's name, `Claude`, see `git log` |
 | Kind of test | real SAMD21 and Raspberry Pi 4B hardware | host builds, mocks, simulated sensors, qemu, Arduino compile |
 
 The readings below were not produced by this repository's BME280 code. The excerpts are quoted
