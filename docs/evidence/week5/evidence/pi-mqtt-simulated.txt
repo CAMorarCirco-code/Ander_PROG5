@@ -1,0 +1,6 @@
+han/ese/gabrielle-olivia-handoko/mcp3426/simulated {"raw_counts":2010,"adc_input_V":0.125625,"at_adc_limit":false,"simulated":true}
+han/ese/gabrielle-olivia-handoko/mcp3426/simulated/secondary {"raw_counts":10010,"adc_input_V":0.625625,"at_adc_limit":false,"simulated":true}
+han/ese/gabrielle-olivia-handoko/mcp3426/simulated {"raw_counts":2020,"adc_input_V":0.126250,"at_adc_limit":false,"simulated":true}
+han/ese/gabrielle-olivia-handoko/mcp3426/simulated/secondary {"raw_counts":10020,"adc_input_V":0.626250,"at_adc_limit":false,"simulated":true}
+han/ese/gabrielle-olivia-handoko/mcp3426/simulated {"raw_counts":2030,"adc_input_V":0.126875,"at_adc_limit":false,"simulated":true}
+han/ese/gabrielle-olivia-handoko/mcp3426/simulated/secondary {"raw_counts":10030,"adc_input_V":0.626875,"at_adc_limit":false,"simulated":true}

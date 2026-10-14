@@ -1,0 +1,33 @@
+Internal ctest changing into directory: /home/liv/PROG5_Week7_Test/week3/pressurelib/build-week7
+UpdateCTestConfiguration  from :/home/liv/PROG5_Week7_Test/week3/pressurelib/build-week7/DartConfiguration.tcl
+Parse Config file:/home/liv/PROG5_Week7_Test/week3/pressurelib/build-week7/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/home/liv/PROG5_Week7_Test/week3/pressurelib/build-week7/DartConfiguration.tcl
+Parse Config file:/home/liv/PROG5_Week7_Test/week3/pressurelib/build-week7/DartConfiguration.tcl
+Test project /home/liv/PROG5_Week7_Test/week3/pressurelib/build-week7
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 3
+    Start 3: assignment7_unit
+
+3: Test command: /home/liv/PROG5_Week7_Test/week3/pressurelib/build-week7/tests/assignment7_tests "--no-colors=true"
+3: Working Directory: /home/liv/PROG5_Week7_Test/week3/pressurelib/build-week7/tests
+3: Test timeout computed to be: 10
+3: [doctest] doctest version is "2.4.11"
+3: [doctest] run with "--help" for options
+3: ===============================================================================
+3: [doctest] test cases:  16 |  16 passed | 0 failed | 0 skipped
+3: [doctest] assertions: 124 | 124 passed | 0 failed |
+3: [doctest] Status: SUCCESS!
+1/1 Test #3: assignment7_unit .................   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Label Time Summary:
+unit     =   0.02 sec*proc (1 test)
+week7    =   0.02 sec*proc (1 test)
+
+Total Test time (real) =   0.02 sec

@@ -56,7 +56,7 @@ cmake/              cross-compile toolchains for Raspberry Pi OS (aarch64, armhf
 docs/               week4_class_diagram.*, week5_sequence_diagram.*,
                     week6/ (class, package and two sequence diagrams; .puml + .svg + .png),
                     week7/ (package diagrams before/after the hal refactor), refactor_report.md,
-                    evidence.md (shared lab hardware measurements and their provenance)
+                    evidence.md + evidence/ (shared lab hardware records, copied unchanged, and their provenance)
 CMakeLists.txt      core + Linux platform + station (week 5) + examples + tests
 library.properties  Arduino library metadata
 ```

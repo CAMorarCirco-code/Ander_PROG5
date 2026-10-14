@@ -24,20 +24,21 @@ different things:
 |---|---|---|
 | Who did the work | Ander and Liv, together | Ander (author: requirements, design decisions, review, own build and test run), with an AI coding assistant writing most of the code |
 | Repository owner | Liv | Ander |
-| Where the records are | Liv's repository (links below, pinned to commit `0ddac17`) | here |
+| Where the records are | Liv's repository, with unchanged copies in [`evidence/`](evidence/README.md) | here |
 | Code that ran | **Liv's library** (`week3/pressurelib`), at the commits named per week | this BME280 library |
 | Git authorship | commits by `GabrielleOlivia` | commits recorded under the assistant's name, `Claude`, see `git log` |
 | Kind of test | real SAMD21 and Raspberry Pi 4B hardware | host builds, mocks, simulated sensors, qemu, Arduino compile |
 
-The readings below were not produced by this repository's BME280 code. The excerpts are quoted
-unchanged; the original files are not copied here. The results of this repository's own code are
+The readings below were not produced by this repository's BME280 code. Unchanged copies of the
+records are in [`evidence/`](evidence/README.md) (copied from Liv's repository at commit `0ddac17`);
+each link below opens the local copy, with the original next to it. The results of this repository's own code are
 in the [README](../README.md) verification tables.
 
 ## Week 3: Serial output on the SAMD21
 
 | | |
 |---|---|
-| Evidence | [`week3/pressurelib/evidence/arduino-serial-20261013.txt`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week3/pressurelib/evidence/arduino-serial-20261013.txt), procedure and setup in [`week3/pressurelib/docs/BOARD_TEST.md`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week3/pressurelib/docs/BOARD_TEST.md) |
+| Evidence | [`week3/pressurelib/evidence/arduino-serial-20261013.txt`](evidence/week3/pressurelib/evidence/arduino-serial-20261013.txt) ([original](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week3/pressurelib/evidence/arduino-serial-20261013.txt)), procedure and setup in [`week3/pressurelib/docs/BOARD_TEST.md`](evidence/week3/pressurelib/docs/BOARD_TEST.md) ([original](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week3/pressurelib/docs/BOARD_TEST.md)) |
 | Added in | `100a7e4`, 13 Oct 2026 |
 | Platform | ModularSim SAMD21 SensorHub (Feather M0 Express build variant), PlatformIO, COM3 at 115200 baud |
 | Code | Liv's `PressureRead` example; the flashed commit was not recorded (stated in the file) |
@@ -62,7 +63,7 @@ in the [README](../README.md) verification tables.
 
 | | |
 |---|---|
-| Evidence | [`week4/evidence/pi-smoke-test.txt`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week4/evidence/pi-smoke-test.txt) (unedited `script` recording), procedure in [`week4/PI_TEST.md`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week4/PI_TEST.md) |
+| Evidence | [`week4/evidence/pi-smoke-test.txt`](evidence/week4/evidence/pi-smoke-test.txt) ([original](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week4/evidence/pi-smoke-test.txt)) (unedited `script` recording), procedure in [`week4/PI_TEST.md`](evidence/week4/PI_TEST.md) ([original](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week4/PI_TEST.md)) |
 | Added in | `2aab8f9`, recorded 13 Oct 2026 16:04-16:05 (+02:00) |
 | Platform | Raspberry Pi 4B Rev 1.5 (4 GB), Debian 13 Trixie ARM64, kernel `6.18.50+rpt-rpi-v8`, `/dev/i2c-1` |
 | Code | Liv's `pressure_read`, her commit `eade45b` |
@@ -88,7 +89,7 @@ Script done on 2026-10-13 16:05:24+02:00 [COMMAND_EXIT_CODE="0"]
 
 | | |
 |---|---|
-| Evidence | [`week5/evidence/pi-mqtt-real.txt`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week5/evidence/pi-mqtt-real.txt) and [`pi-mqtt-simulated.txt`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week5/evidence/pi-mqtt-simulated.txt); run described in [`week5/README.md`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week5/README.md) |
+| Evidence | [`week5/evidence/pi-mqtt-real.txt`](evidence/week5/evidence/pi-mqtt-real.txt) ([original](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week5/evidence/pi-mqtt-real.txt)) and [`pi-mqtt-simulated.txt`](evidence/week5/evidence/pi-mqtt-simulated.txt) ([original](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week5/evidence/pi-mqtt-simulated.txt)); run described in [`week5/README.md`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week5/README.md) |
 | Added in | `f74b235`, 13 Oct 2026 |
 | Platform | same Raspberry Pi 4B, local Mosquitto 2.0.21 broker and `mosquitto_sub` |
 | Code | Liv's `pressure_station`, her commit `eade45b` (already with the two-sensor extension) |
@@ -112,7 +113,7 @@ No hardware evidence is required. The design is checked in software (README, Wee
 
 | | |
 |---|---|
-| Evidence | [`week7/evidence/pi-ctest.txt`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week7/evidence/pi-ctest.txt), [`week7/evidence/pi-week7-doctest.txt`](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week7/evidence/pi-week7-doctest.txt) |
+| Evidence | [`week7/evidence/pi-ctest.txt`](evidence/week7/evidence/pi-ctest.txt) ([original](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week7/evidence/pi-ctest.txt)), [`week7/evidence/pi-week7-doctest.txt`](evidence/week7/evidence/pi-week7-doctest.txt) ([original](https://github.com/GabrielleOlivia/PROG5_GO.Handoko/blob/0ddac17640ebb75bb9592af15cc73718c073b2ad/week7/evidence/pi-week7-doctest.txt)) |
 | Added in | `0ddac17`, 13 Oct 2026 |
 | Platform | same Raspberry Pi 4B, Debian 13 ARM64, GCC 14.2.0, CMake 3.31.6, doctest 2.4.11 |
 | Code | Liv's commit `1d1cf9f` |
