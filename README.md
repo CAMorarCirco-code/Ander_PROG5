@@ -142,10 +142,29 @@ mosquitto 2.0.18); all builds with `-Wall -Wextra -Wpedantic -Werror`:
 | aarch64 cross build, run under `qemu-aarch64` | 0 warnings; 8/8 (incl. `unit`; broker cases of `mqtt_publisher` skipped when cross-compiling; `station_e2e` is host-only) |
 | armhf cross build, run under `qemu-arm` | 0 warnings; 7/7 (no armhf libmosquitto here: MQTT parts not built) |
 | Arduino sketches (`nano_33_iot`, arm-none-eabi-gcc with the arduino-cli recipe, not arduino-cli itself) | both compile and link, 0 library/sketch warnings; `ReadEverySecond` 27292 B flash |
+| GCC 14.2 (the compiler of Debian 13 / Raspberry Pi OS Trixie), fresh clone, x86-64 | 0 warnings; 9/9. Same compiler on `week6` (7/7) and `week5` (7/7) |
+| CMake 4.4.4, fresh clone (CMake 4 rejects doctest's `cmake_minimum_required(3.0)` unless `CMAKE_POLICY_VERSION_MINIMUM` is set, which `tests/CMakeLists.txt` does) | configures and builds; 9/9 |
 
 **Not verified (pending hardware):** "the Pi still publishes" - the `v1.0` hand-in asks for it -
 has **not** been checked. No Raspberry Pi with a BME280 was available; the station has only run
 with `--fake` on the laptop. The Arduino example has been compiled, not run.
+
+### Hardware checklist: one session closes every week
+
+The code paths these tests exercise are the same in `week7` as in the earlier tags (the week-7
+refactor only renamed namespaces), so one session on the final branch covers all weeks. Paste each
+output, unedited, into the section named in the last column.
+
+| # | Where | Command | Expected | Paste into |
+|---|---|---|---|---|
+| 1 | Pi | `i2cdetect -y 1` | `76` (or `77`) | Week 4 verification |
+| 2 | Pi | `./build/examples/rpi/bme280_rpi_smoke /dev/i2c-1 0x76 1000 10` | `BME280 ready ...`, 10 lines of 15..30 C, 95000..105000 Pa, 20..80 %RH, exit 0 | Week 4 verification |
+| 3 | Pi | `ctest --test-dir build` (before starting the mosquitto service, or `station_e2e` reports *skipped*: it needs port 1883 free) | 9/9 | Week 7 verification |
+| 4 | Pi | `./build/examples/station/station_main` + `mosquitto_sub -h localhost -t 'han/ese/#' -v` | `han/ese/ander/bme280/state` with real values and `han/ese/ander/fake/state`, once per second each; Ctrl+C exits cleanly | Week 5 and Week 7 verification |
+| 5 | SAMD21 + BME280 | upload `examples/arduino/ReadEverySecond`, Serial Monitor 115200 | one line per second with plausible values | Week 3 / Platforms |
+| 6 | Laptop with the SAMD core | `arduino-cli compile -b arduino:samd:nano_33_iot --library . examples/arduino/ReadEverySecond` | success | Week 4 verification (Arduino build note) |
+
+Record the Pi model, OS and `git rev-parse --short HEAD` with the outputs.
 
 ## Week 6: design on paper, polymorphism in code
 
