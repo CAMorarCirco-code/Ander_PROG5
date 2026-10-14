@@ -88,7 +88,7 @@ starter); offline, pass `-DFETCHCONTENT_SOURCE_DIR_DOCTEST=/path/to/doctest-2.4.
 The suites from earlier weeks (`core`, `station`, the platform tests, `mqtt_publisher`,
 `station_e2e`) still run; `dependencies` checks the package rules below.
 
-Test output on the development laptop (x86-64, GCC 13.3), `ctest --test-dir build`:
+Test output on the x86-64 Linux build host (GCC 13.3), `ctest --test-dir build`:
 
 ```
 1/9 Test #1: core .............................   Passed    0.01 sec
@@ -244,7 +244,7 @@ sampler.onMeasurement([&](std::size_t i, const bme280::Measurement& m) {
 });
 ```
 
-`station_main --fake --console` on the development laptop (no hardware):
+`station_main --fake --console` on the x86-64 Linux build host (no hardware):
 
 ```
 han/ese/ander/bme280/state {"t":20.00,"p":101325,"h":45.2}
@@ -311,7 +311,7 @@ with `-Wall -Wextra -Wpedantic -Werror`:
 | Arduino sketches (`nano_33_iot`, arm-none-eabi-gcc with the arduino-cli recipe, not arduino-cli itself) | both compile and link, 0 library/sketch warnings; `ReadEverySecond` 27292 B flash |
 | `core` has no outgoing dependency | no app/platform include in `include/bme280/` or `src/Bme280.cpp`; `nm -u libbme280_core.a`: only Bosch and C++ runtime symbols |
 
-The capture above comes from `--fake` on the laptop. Week 6 needs no hardware evidence.
+The capture above comes from `--fake` on the build host. Week 6 needs no hardware evidence.
 
 ## Week 5: sampling thread, callback, MQTT
 
@@ -415,7 +415,7 @@ cmake -S . -B build && cmake --build build -j
 
 ### `mosquitto_sub` capture
 
-Captured on the **development laptop (x86-64 Linux), not on a Pi**: `station_main --fake` (the
+Captured on the **x86-64 Linux build host, not on a Pi**: `station_main --fake` (the
 `FakeSensor` ramp) publishing to a local mosquitto 2.0.18, subscribed exactly as the assignment
 says:
 
@@ -542,7 +542,7 @@ Checked in software on an x86-64 Linux host (Ubuntu 24.04, GCC 13.3, Clang 18.1.
 **Hardware measurements (shared lab work, Liv's setup and library):** `mosquitto_sub` capture on
 the Raspberry Pi 4B, 13 Oct 2026: real sensor readings plus a fake second sensor through the Pi's
 Mosquitto broker; see [`docs/evidence.md`](docs/evidence.md#week-5-mosquitto_sub-capture-on-the-pi).
-The capture above is this repository's own station (`--fake`, laptop).
+The capture above is this repository's own station (`--fake`, build host).
 
 ## Week 4: Bus/Clock split
 
